@@ -627,14 +627,36 @@ Reducing it is the purpose of the diversity schemes of Problems~2 and~3.
 \section{Problem 2 --- Receive diversity (SIMO \texorpdfstring{$1 \times L$}{1 x L}), 4-QAM}
 \label{sec:p2}
 
-\textbf{Model.} $\y = \h x + \w$ with $h_\ell \sim \CN(0,1)$ i.i.d.,
-$w_\ell \sim \CN(0, 1/\snr)$ i.i.d., and a new $\h$ for every symbol, known at the
-receiver. $\snr$ is the average SNR \emph{per receive antenna}. For every $L$ and
-SNR, MRC and SC process the \emph{same} symbols, channels and noise, so their
-comparison is as fair as possible.
+Problem~2 adds $L$ receive antennas to the fading channel of Problem~1. One transmit
+antenna sends a 4-QAM symbol $x$, and the receiver collects
+\begin{equation}
+  \y = \h x + \w, \qquad
+  \h = (h_1, \dots, h_L)^\top, \qquad
+  \w = (w_1, \dots, w_L)^\top .
+  \label{eq:p2-channel}
+\end{equation}
+\begin{itemize}
+  \item \textbf{Channel:} $h_\ell \sim \CN(0,1)$, independent across antennas and drawn
+        again for every symbol. The receiver knows $\h$.
+  \item \textbf{Noise:} $w_\ell \sim \CN(0, 1/\snr)$, independent across antennas and
+        independent of $\h$.
+  \item \textbf{SNR:} since $\E\abs{h_\ell}^2 = \E\abs{x}^2 = 1$, $\snr$ is the average
+        SNR \emph{per receive antenna}. For $L = 1$ the model is exactly the fading
+        channel of Problem~1.
+  \item \textbf{Code:} \code{simo_rayleigh_channel} (\code{common/channel.py}) draws
+        $\h$ and $\w$ as $N \times L$ arrays; the constellation and the ML detector of
+        Problem~1 are reused unchanged.
+\end{itemize}
+Each receiver turns the $L$ samples into one scalar decision statistic
+$r = g\,x + n$ \eqref{eq:scalar}. Task~1 derives $r$ for MRC and SC, Task~2 simulates
+both, and the results are discussed in Sec.~\ref{sec:p2-discussion}.
 
-\subsection{Task 1: decision statistics as equivalent scalar channels}
+\subsection{Task 1: combining schemes}
 \label{sec:p2-statistics}
+
+Both receivers reduce $\y$ to an equivalent scalar channel and pass $(r, g)$ to the
+Problem~1 detector $\hat\imath = \arg\min_i \abs{r - g\,u_i}^2$. The table summarises
+the result; the derivations follow.
 
 \begin{center}\small
   \begin{tabular}{@{}lcccc@{}}
@@ -650,17 +672,30 @@ comparison is as fair as possible.
 In the code these are \code{mrc_combine} and \code{selection_combine}
 (\code{common/combining.py}).
 
-\textbf{MRC} [2, Secs.~3.1--3.2]. Each branch is weighted by its conjugate channel
-gain and the branches are added. The code normalises the sum by $\norm{\h}$:
+\subsubsection{Maximal ratio combining (MRC)}
+\label{sec:p2-mrc}
+
+\textbf{Combining} [2, Secs.~3.1--3.2]. Each branch is multiplied by its conjugate
+channel gain $h_\ell^*$ and the branches are added:
 \begin{equation*}
+  \h^H\y = \sum_{\ell=1}^{L} h_\ell^*\,y_\ell = \norm{\h}^2 x + \h^H\w .
+\end{equation*}
+The factor $h_\ell^*$ does two things: it removes the phase of each branch, so all
+signal parts add in phase, and it gives a strong branch more weight than a weak one.
+
+\textbf{Equivalent scalar channel.} The code divides the sum by $\norm{\h}$:
+\begin{equation}
   r = \frac{\h^H\y}{\norm{\h}} = \norm{\h}\,x + \underbrace{\frac{\h^H\w}{\norm{\h}}}_{n},
   \qquad
   \mathrm{Var}(n) = \frac{\sum_\ell \abs{h_\ell}^2\cdot(1/\snr)}{\norm{\h}^2} = \frac{1}{\snr}.
-\end{equation*}
-This is \eqref{eq:scalar} with the real, positive gain $g = \norm{\h}$, and the
-Problem~1 detector $\hat\imath = \arg\min_i \abs{r - \norm{\h}u_i}^2$ is applied to it.
+  \label{eq:p2-mrc}
+\end{equation}
+This is \eqref{eq:scalar} with the real, positive gain $g = \norm{\h}$ and noise
+variance $1/\snr$. The output SNR is
+$\norm{\h}^2\snr = \sum_\ell \abs{h_\ell}^2\snr$: MRC adds the SNRs of all branches.
+The Problem~1 detector is applied as $\hat\imath = \arg\min_i \abs{r - \norm{\h}u_i}^2$.
 
-\emph{Why this is exactly the ML rule.} With $L$ antennas the ML rule is
+\textbf{Why this is exactly the ML rule.} With $L$ antennas the ML rule is
 $\arg\min_i \norm{\y - \h u_i}^2$. Expanding and using $\h^H\y = \norm{\h}\,r$:
 \begin{equation*}
   \norm{\y - \h u_i}^2
@@ -673,10 +708,29 @@ $\norm{\h}^2$ and noise variance $\norm{\h}^2/\snr$. Its metric is
 $\abs{\h^H\y - \norm{\h}^2u_i}^2 = \norm{\h}^2\,\abs{r - \norm{\h}u_i}^2$, the same
 metric multiplied by a positive constant, so it is also ML.
 
-\textbf{SC} [2, Sec.~3.5]. The receiver keeps only the strongest antenna,
-$r = y_{\ell^\star} = h_{\ell^\star}x + w_{\ell^\star}$, and detects it with the coherent
-Problem~1 detector ($g = h_{\ell^\star}$). The choice of $\ell^\star$ depends only on
-$\h$, which is independent of $\w$, so $w_{\ell^\star}$ is still $\CN(0, 1/\snr)$.
+\subsubsection{Selection combining (SC)}
+\label{sec:p2-sc}
+
+\textbf{Selection} [2, Sec.~3.5]. The receiver keeps only the antenna with the
+largest instantaneous channel gain,
+\begin{equation}
+  \ell^\star = \arg\max_\ell \abs{h_\ell}^2, \qquad
+  r = y_{\ell^\star} = h_{\ell^\star}x + w_{\ell^\star},
+  \label{eq:p2-sc}
+\end{equation}
+and ignores the other $L - 1$ samples. In hardware this needs only one receive
+chain, switched to the best antenna.
+
+\textbf{Equivalent scalar channel.} This is \eqref{eq:scalar} with the complex gain
+$g = h_{\ell^\star}$, whose phase is removed by the coherent detector. The choice of
+$\ell^\star$ depends only on $\h$, which is independent of $\w$, so $w_{\ell^\star}$ is
+still $\CN(0, 1/\snr)$. The output SNR is $\max_\ell\abs{h_\ell}^2\snr$, and the Problem~1
+detector is applied to the selected branch:
+$\hat\imath = \arg\min_i \abs{y_{\ell^\star} - h_{\ell^\star}u_i}^2$.
+
+\textbf{MRC against SC.} For every channel,
+$\sum_\ell \abs{h_\ell}^2 \ge \max_\ell \abs{h_\ell}^2$, so the output SNR of MRC is never
+lower than that of SC. SC trades this SNR for a simpler receiver.
 
 \textbf{Numerical check} (\code{results/q2/summary.txt}). At 10~dB with $10^6$
 symbols, the measured noise variance of the decision statistic, divided by the
@@ -686,42 +740,82 @@ accuracy of $10^6$ samples. The mean gains $\E\norm{\h}^2 = L$ and
 $\E\max_\ell\abs{h_\ell}^2 = \sum_{k=1}^{L}1/k$ are also reproduced to 0.01~dB.
 
 \subsection{Task 2: simulation}
+\label{sec:p2-task2}
 
-The SER of MRC and SC was estimated for $L \in \{1, 2, 4\}$ and
-$\snrdb \in \{0, 2, \dots, 24\}$ with $N = 10^6$ symbols per point. All curves are
-plotted on one figure (Fig.~\ref{fig:receive}): one colour per $L$, solid lines for
-MRC and dashed lines for SC. Fig.~\ref{fig:receive-theory} shows the same points
-against the exact theory of Sec.~\ref{sec:exact}.
+The script \code{problem2/receive_diversity.py} runs Algorithm~1 for
+$L \in \{1, 2, 4\}$ and $\snrdb \in \{0, 2, \dots, 24\}$. For each $L$ and SNR:
+\begin{enumerate}
+  \item draw $N = 10^6$ equiprobable indices and set $x = u_i$ (4-QAM);
+  \item draw $\h$ and $\w$ ($N \times L$ each) and form $\y = \h x + \w$;
+  \item apply MRC \eqref{eq:p2-mrc} and SC \eqref{eq:p2-sc} to the \emph{same} $\y$
+        and $\h$;
+  \item detect each statistic with the Problem~1 detector and count the errors of each
+        receiver.
+\end{enumerate}
+Because MRC and SC see the same symbols, channels and noise, any difference between
+their curves comes from the combining alone. Fig.~\ref{fig:receive} shows all curves
+on one figure, as the assignment asks: one colour per $L$, solid lines for MRC and
+dashed lines for SC. The grey band is the exact single-antenna curve of Problem~1,
+for the $L = 1$ consistency check, and the arrows mark the MRC--SC gap at $10^{-3}$.
+Fig.~\ref{fig:receive-theory} is an extra figure that compares the same points with
+the exact theory of Sec.~\ref{sec:exact}.
+
+\textbf{What the figures should show.} Three predictions from [2] are checked in the
+discussion:
+\begin{itemize}
+  \item \emph{$L = 1$:} MRC and SC both reduce to the Problem~1 detector, so their
+        curves coincide with each other and with the 4-QAM fading curve of Problem~1.
+  \item \emph{Diversity order:} both receivers have $\Pe \propto \snr^{-L}$ at high SNR,
+        so the curves should fall by about $L$ decades per 10~dB: 1, 2 and 4.
+  \item \emph{Array gain:} MRC raises the mean output SNR by a factor $L$ (3.01 and
+        6.02~dB), SC only by $\sum_{k=1}^{L}1/k$ (1.76 and 3.19~dB). So for $L = 2$
+        and $L = 4$, MRC should lead SC by roughly 1.25 and 2.83~dB.
+\end{itemize}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.8\linewidth]{q2/receive_diversity.pdf}
+  \includegraphics[width=0.74\linewidth]{q2/receive_diversity.pdf}
   \caption{Problem~2: SER of 4-QAM with $L \in \{1, 2, 4\}$ receive antennas. MRC:
            solid lines, circles; SC: dashed lines, squares; one colour per $L$. Grey
            band: exact single-antenna 4-QAM SER of Problem~1. Monte Carlo with
            $N = 10^6$ symbols per SNR point, $\snrdb \in \{0, 2, \dots, 24\}$ (average
            SNR per antenna); points with $\nerr < 10$ are omitted, so the $L = 4$
-           curves stop at 14 and 16~dB. Arrows: the MRC--SC gap at $10^{-3}$. For
-           $L = 1$ the two curves lie exactly on top of each other.}
+           curves stop at 14 and 16~dB. Arrows: the MRC--SC gap at $10^{-3}$, 3.2~dB for
+           $L = 4$ and 1.5~dB for $L = 2$. \textbf{For each $L$, MRC and SC have the same
+           slope, and MRC is better by a nearly constant gap; for $L = 1$ the two curves
+           are identical} (Sec.~\ref{sec:p2-gap}).}
   \label{fig:receive}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.8\linewidth]{q2/receive_diversity_theory.pdf}
+  \includegraphics[width=0.74\linewidth]{q2/receive_diversity_theory.pdf}
   \caption{Extra figure: the simulated points of Fig.~\ref{fig:receive} ($N = 10^6$
            symbols per SNR point, 0--24~dB) against the exact theory of
-           Sec.~\ref{sec:exact} (lines; MRC solid, SC dashed).}
+           Sec.~\ref{sec:exact} (lines; MRC solid, SC dashed). \textbf{Every plotted
+           point lies on its theory curve} (within $2.01\sigma$).}
   \label{fig:receive-theory}
 \end{figure}
 
+\FloatBarrier   % both figures before the discussion
 \subsection{Discussion}
+\label{sec:p2-discussion}
 
-\textbf{Decision statistics.} These are derived in Sec.~\ref{sec:p2-statistics}.
+The assignment asks for four points: the decision statistics of Task~1
+(Sec.~\ref{sec:p2-disc-statistics}), a consistency check for $L = 1$
+(Sec.~\ref{sec:p2-consistency}), the high-SNR slope of each curve against the
+predicted diversity order (Sec.~\ref{sec:p2-slope}), and the SNR gap between MRC and
+SC with its origin in array gain (Sec.~\ref{sec:p2-gap}).
+
+\subsubsection{Decision statistics}
+\label{sec:p2-disc-statistics}
+
+These are derived in Sec.~\ref{sec:p2-statistics}.
 Both receivers give $r = g\,x + n$ with $n \sim \CN(0, 1/\snr)$, so the Problem~1
 detector is reused unchanged.
 
-\textbf{Consistency check ($L = 1$).}
+\subsubsection{Consistency check (\texorpdfstring{$L = 1$}{L = 1})}
+\label{sec:p2-consistency}
 \begin{itemize}
   \item With one antenna, MRC is only a phase rotation, $r = (h^*/\abs{h})\,y$, and SC
         has only one branch to choose. Both reduce to coherent detection on
@@ -735,7 +829,10 @@ detector is reused unchanged.
         Table~\ref{tab:a-receive}); every plotted point is within $2.01\sigma$.
 \end{itemize}
 
-\textbf{High-SNR slope versus diversity order.} MRC and SC both have diversity
+\subsubsection{High-SNR slope versus diversity order}
+\label{sec:p2-slope}
+
+MRC and SC both have diversity
 order $L$, i.e.\ $\Pe \propto \snr^{-L}$. An error now needs \emph{all} $L$
 independent branches to fade at once. With $\epsilon = 1/\snr$:
 \begin{equation}
@@ -784,8 +881,10 @@ the high-SNR end of each curve.
         slope does grow from 2.6 to 3.4 along the measured part, as expected.
 \end{itemize}
 
-\textbf{SNR gap between MRC and SC (arrows in Fig.~\ref{fig:receive}).}
-Table~\ref{tab:p2-gaps} gives the SNR each receiver needs for a target SER.
+\subsubsection{SNR gap between MRC and SC, and array gain}
+\label{sec:p2-gap}
+
+The arrows in Fig.~\ref{fig:receive} mark this gap. Table~\ref{tab:p2-gaps} gives the SNR each receiver needs for a target SER.
 
 \begin{table}[htbp]
   \centering\small
@@ -841,38 +940,80 @@ Table~\ref{tab:p2-gaps} gives the SNR each receiver needs for a target SER.
 \section{Problem 3 --- Transmit diversity (MISO \texorpdfstring{$2 \times 1$}{2 x 1}), 4-QAM}
 \label{sec:p3}
 
-\textbf{Model.} $h_1, h_2 \sim \CN(0,1)$ i.i.d., known at the receiver, and
-$w \sim \CN(0, 1/\snr)$. For a fair comparison, the total energy transmitted per
-channel use, summed over both antennas, is 1, as for a single antenna. So $\snr$
-is the total transmit energy divided by the noise variance.
+Problem~3 moves the two antennas to the transmitter. If antenna $\ell$ sends $s_\ell$
+in a channel use, the single receive antenna gets
+\begin{equation}
+  y = h_1 s_1 + h_2 s_2 + w .
+  \label{eq:p3-channel}
+\end{equation}
+\begin{itemize}
+  \item \textbf{Channel:} $h_1, h_2 \sim \CN(0,1)$ i.i.d., known at the receiver, and
+        drawn again for every symbol (for every block of two channel uses in Alamouti).
+  \item \textbf{Noise:} $w \sim \CN(0, 1/\snr)$.
+  \item \textbf{Fair comparison:} every scheme sends a total energy
+        $\E\big[\abs{s_1}^2 + \abs{s_2}^2\big] = 1$ per channel use, the same as one
+        antenna sending $x$. So $\snr$ is the total transmit energy divided by the noise
+        variance.
+  \item \textbf{Code:} \code{miso_channel} (\code{common/channel.py}) implements
+        \eqref{eq:p3-channel}; the transmitters and receivers are in
+        \code{problem3/transmit_diversity.py}. The constellation and the detector of
+        Problem~1 are reused.
+\end{itemize}
+As in Problem~2, every receiver ends with one scalar channel $r = g\,x + n$,
+$n \sim \CN(0, 1/\snr)$ \eqref{eq:scalar}. Task~1 derives it for each scheme, Task~2
+simulates them, and Sec.~\ref{sec:p3-discussion} discusses the results.
 
 \subsection{Task 1: transmission schemes}
+\label{sec:p3-task1}
 
-\textbf{Single antenna (reference).} $s = x$, $y = hx + w$, with coherent ML
-detection: the fading channel of Problem~1.
+The table summarises the three schemes, with MRC ($L = 2$) of Problem~2 for
+comparison; the derivations follow.
 
-\textbf{Transmit beamforming} [2, Sec.~4.1] (channel known at the transmitter).
-Antenna $\ell$ sends $v_\ell x$ with the weights
-\begin{equation*}
+\begin{center}\small
+  \begin{tabular}{@{}lcccc@{}}
+    \toprule
+    Scheme & Channel known at transmitter & Symbol scaling & Gain $g$ & Output SNR \\
+    \midrule
+    Single antenna  & no  & $s = x$ & $h$ & $\abs{h}^2\snr$ \\
+    Beamforming     & yes & $s_\ell = (h_\ell^*/\norm{\h})\,x$ & $\norm{\h}$ & $\norm{\h}^2\snr$ \\
+    Alamouti        & no  & $\tfrac{1}{\sqrt2}$ on every entry of $\mathbf{S}$ & $\norm{\h}/\sqrt2$ & $\norm{\h}^2\snr/2$ \\
+    MRC, $L = 2$    & --  & $s = x$ (one transmit antenna) & $\norm{\h}$ & $\norm{\h}^2\snr$ \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+\subsubsection{Single antenna (reference)}
+
+$s = x$ is sent from one antenna, so $y = hx + w$: the fading channel of Problem~1,
+with $g = h$ and output SNR $\abs{h}^2\snr$.
+
+\subsubsection{Transmit beamforming}
+
+\textbf{Weights} [2, Sec.~4.1]. The transmitter knows $(h_1, h_2)$ and sends the same
+symbol from both antennas, antenna $\ell$ sending $v_\ell x$ with
+\begin{equation}
   \mathbf{v} = \frac{\h^*}{\norm{\h}} = \frac{1}{\sqrt{\abs{h_1}^2 + \abs{h_2}^2}}
   \begin{pmatrix} h_1^* \\ h_2^* \end{pmatrix},
   \qquad
   y = h_1v_1x + h_2v_2x + w = \norm{\h}\,x + w .
-\end{equation*}
+  \label{eq:p3-bf}
+\end{equation}
 \begin{itemize}
   \item Each path arrives with the real, positive gain
         $h_\ell v_\ell = \abs{h_\ell}^2/\norm{\h}$, so the two paths add in phase.
-  \item Equivalent scalar channel: $r = y$, gain $\norm{\h}$, noise variance $1/\snr$,
-        output SNR $\norm{\h}^2\snr$. This is the same as MRC with $L = 2$. Detection:
-        $\arg\min_i \abs{y - \norm{\h}u_i}^2$.
-  \item \emph{Scaling:} $\norm{\mathbf{v}} = 1$, so the energy per channel use is
+  \item \textbf{Equivalent channel:} $r = y$, gain $g = \norm{\h}$, noise variance
+        $1/\snr$, output SNR $\norm{\h}^2\snr$, the same as MRC with $L = 2$. Detection:
+        $\hat\imath = \arg\min_i \abs{y - \norm{\h}u_i}^2$.
+  \item \textbf{Scaling:} $\norm{\mathbf{v}} = 1$, so the energy per channel use is
         $\abs{v_1x}^2 + \abs{v_2x}^2 = \abs{x}^2$, with mean 1. No further scaling is
         needed.
 \end{itemize}
 
-\textbf{Alamouti scheme} [2, Sec.~4.2] (no channel knowledge at the transmitter).
-Two symbols are sent in two channel uses. The transmission matrix, with rows for
-channel uses and columns for antennas, is
+\subsubsection{Alamouti scheme}
+
+\textbf{Transmission matrix} [2, Sec.~4.2]. The transmitter does not know the channel.
+Two symbols are sent in two channel uses; rows are channel uses and columns are
+antennas:
 \begin{equation}
   \mathbf{S} = \frac{1}{\sqrt2}\begin{pmatrix} x_1 & x_2 \\ -x_2^* & x_1^* \end{pmatrix},
   \qquad
@@ -892,7 +1033,8 @@ matrix has orthogonal columns:
   + \begin{pmatrix} w_1 \\ w_2^* \end{pmatrix},
   \qquad \mathbf{H}^H\mathbf{H} = \norm{\h}^2\,\mathbf{I}.
 \end{equation*}
-Alamouti combining projects onto the two columns (normalised by $\norm{\h}$):
+\textbf{Combining.} The receiver projects onto the two columns (normalised by
+$\norm{\h}$):
 \begin{equation}
   \begin{aligned}
     r_1 &= \frac{h_1^*y_1 + h_2y_2^*}{\norm{\h}} = \frac{\norm{\h}}{\sqrt2}\,x_1 + n_1,\\
@@ -906,19 +1048,20 @@ Alamouti combining projects onto the two columns (normalised by $\norm{\h}$):
         $n_2 = (h_2^*w_1 - h_1w_2^*)/\norm{\h}$ are independent $\CN(0, 1/\snr)$
         (their covariance is $\mathbf{H}^H\mathbf{H}/(\norm{\h}^2\snr) = \mathbf{I}/\snr$),
         so detecting $x_1$ and $x_2$ separately is ML.
-  \item Each $r_k$ is a scalar channel with gain $\norm{\h}/\sqrt2$, noise variance
-        $1/\snr$ and output SNR $\norm{\h}^2\snr/2$. It is detected by the Problem~1
-        detector with $g = \norm{\h}/\sqrt2$.
-  \item \emph{Scaling:} every entry of $\mathbf{S}$ carries $1/\sqrt2$, so a channel
+  \item \textbf{Equivalent channel:} each $r_k$ has gain $g = \norm{\h}/\sqrt2$, noise
+        variance $1/\snr$ and output SNR $\norm{\h}^2\snr/2$, and is detected by the
+        Problem~1 detector.
+  \item \textbf{Scaling:} every entry of $\mathbf{S}$ carries $1/\sqrt2$, so a channel
         use carries $(\abs{x_1}^2 + \abs{x_2}^2)/2$, with mean 1, and each antenna
         carries half of it.
-  \item The rate is one symbol per channel use. $N/2 = 5\times10^5$ blocks are
-        simulated per SNR point, and the SER is counted over all $N = 10^6$ symbols.
+  \item The rate is one symbol per channel use, as for a single antenna.
 \end{itemize}
 
-\textbf{Numerical check of the energy constraint.} The simulation averages the
-energy actually sent, $\sum_\ell \abs{s_\ell}^2$, over all channel uses at every
-SNR point (\code{results/q3/summary.txt}):
+\subsubsection{Numerical check of the energy constraint}
+\label{sec:p3-energy}
+
+The simulation averages the energy actually sent, $\sum_\ell \abs{s_\ell}^2$, over all
+channel uses at every SNR point (\code{results/q3/summary.txt}):
 \begin{center}\small
   \begin{tabular}{@{}llcc@{}}
     \toprule
@@ -935,40 +1078,66 @@ the single-antenna system. For 4-QAM this holds in every single channel use, not
 just on average, because $\abs{x}^2 = 1$ for every point.
 
 \subsection{Task 2: simulation}
+\label{sec:p3-task2}
+
+The script \code{problem3/transmit_diversity.py} runs Algorithm~1 for
+$\snrdb \in \{0, 2, \dots, 24\}$. For each scheme and SNR:
+\begin{enumerate}
+  \item draw $N = 10^6$ equiprobable 4-QAM symbols and group them into blocks (one
+        symbol per block, or two for Alamouti, giving $N/2 = 5\times10^5$ blocks);
+  \item draw one $(h_1, h_2)$ per block and form the antenna signals with the scheme's
+        transmitter: \eqref{eq:p3-bf} for beamforming, \eqref{eq:alamouti} for Alamouti;
+  \item pass them through \eqref{eq:p3-channel} and record the energy sent;
+  \item combine with the scheme's receiver, detect with the Problem~1 detector, and
+        count the errors over all $N$ symbols.
+\end{enumerate}
+The MRC ($L = 2$) curve is simulated with the Problem~2 code. Fig.~\ref{fig:transmit}
+shows all four curves on one figure, as the assignment asks; Fig.~\ref{fig:transmit-theory}
+compares the same points with the exact theory of Sec.~\ref{sec:exact}. Every curve
+agrees with its theory (largest deviation $2.55\sigma$), and beamforming agrees with
+the independent MRC simulation within $1.51\sigma$.\footnote{The single-antenna
+curve is identical to the $L = 1$ curve of Problem~2. Both scripts start from seed
+2026 and draw the symbols, channels and noise in the same order.}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.8\linewidth]{q3/transmit_diversity.pdf}
+  \includegraphics[width=0.74\linewidth]{q3/transmit_diversity.pdf}
   \caption{Problem~3: SER of 4-QAM with a single antenna, transmit beamforming and the
            Alamouti scheme ($2 \times 1$), and MRC with $L = 2$ from Problem~2. All
            schemes transmit a total energy of 1 per channel use. Monte Carlo with
            $N = 10^6$ symbols per SNR point (Alamouti: $5 \times 10^5$ blocks of two
            symbols), $\snrdb \in \{0, 2, \dots, 24\}$; points with $\nerr < 10$ are
            omitted. Arrows: Alamouti is 3.0~dB behind beamforming at $10^{-3}$, and the
-           single antenna is 6.3~dB behind Alamouti at $10^{-2}$, a gap that grows. The
-           beamforming and MRC curves lie on top of each other.}
+           single antenna is 6.3~dB behind Alamouti at $10^{-2}$.
+           \textbf{Beamforming and MRC coincide; Alamouti has the same slope but is
+           3~dB behind; the gap to the single antenna grows as the SER falls}
+           (Sec.~\ref{sec:p3-gaps}).}
   \label{fig:transmit}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.8\linewidth]{q3/transmit_diversity_theory.pdf}
+  \includegraphics[width=0.74\linewidth]{q3/transmit_diversity_theory.pdf}
   \caption{Extra figure: the simulated points of Fig.~\ref{fig:transmit} ($N = 10^6$
            symbols per SNR point, 0--24~dB) against the exact theory of
            Sec.~\ref{sec:exact} (lines). Beamforming and MRC have the same theoretical
-           curve.}
+           curve. \textbf{Every plotted point lies on its theory curve} (within
+           $2.55\sigma$).}
   \label{fig:transmit-theory}
 \end{figure}
 
-Every curve agrees with its exact theory (Fig.~\ref{fig:transmit-theory},
-Table~\ref{tab:a-transmit}); the largest deviation is $2.55\sigma$. Beamforming and
-the independent MRC simulation agree within $1.51\sigma$.\footnote{The single-antenna
-curve is identical to the $L = 1$ curve of Problem~2. Both scripts start from seed
-2026 and draw the symbols, channels and noise in the same order.}
-
+\FloatBarrier   % both figures before the discussion
 \subsection{Discussion}
+\label{sec:p3-discussion}
 
-\textbf{Diversity order} (Table~\ref{tab:p3-slopes}).
+The assignment asks for two points: the diversity order of each scheme, read from
+the slope of its curve at high SNR (Sec.~\ref{sec:p3-diversity}), and the SNR gaps
+between beamforming, Alamouti and MRC, with their origin (Sec.~\ref{sec:p3-gaps}).
+
+\subsubsection{Diversity order}
+\label{sec:p3-diversity}
+
+Table~\ref{tab:p3-slopes} gives the high-SNR slope of each curve.
 
 \begin{table}[htbp]
   \centering\small
@@ -1002,8 +1171,11 @@ curve is identical to the $L = 1$ curve of Problem~2. Both scripts start from se
         about the channel.
 \end{itemize}
 
-\textbf{SNR gaps (arrows in Fig.~\ref{fig:transmit}).} Table~\ref{tab:p3-gaps} gives
-the SNR each scheme needs for a target SER.
+\subsubsection{SNR gaps and their origin}
+\label{sec:p3-gaps}
+
+The arrows in Fig.~\ref{fig:transmit} mark two of these gaps.
+Table~\ref{tab:p3-gaps} gives the SNR each scheme needs for a target SER.
 
 \begin{table}[htbp]
   \centering\small
@@ -1073,28 +1245,30 @@ are interpolated between points with only 44--216 errors.
 %% ================================================================ summary
 \section{Summary of the gaps marked in the figures}
 
+Where a gap changes, the two values are those of the two arrows in the figure.
+
 \begin{center}\small
-  \begin{tabular}{@{}>{\raggedright}p{4.3cm}c>{\raggedright}p{3.5cm}>{\raggedright\arraybackslash}p{5.9cm}@{}}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}lclcl@{}}
     \toprule
-    Curves compared & Fig. & Gap & Constant? Why \\
+    Curves compared & Fig. & Gap & Constant? & Reason \\
     \midrule
-    BPSK vs 4-QAM, AWGN    & \ref{fig:awgn}     & 3.9~dB ($10^{-2}$), 3.3~dB ($10^{-4}$) & No; tends to 3~dB (half the energy per component). \\
-    BPSK vs 4-QAM, fading  & \ref{fig:rayleigh} & $\approx 5.6$~dB & Yes; parallel slope-1 lines, $10\log_{10}(0.909/0.25)$. \\
-    AWGN vs fading, BPSK   & \ref{fig:awgn-vs-fading} & 17.3~dB ($10^{-3}$), 25.8~dB ($10^{-4}$) & No; exponential vs $1/\snr$ decay. \\
-    MRC vs SC, $L = 1$     & \ref{fig:receive}  & 0~dB & Identical receivers. \\
-    MRC vs SC, $L = 2$     & \ref{fig:receive}  & $\approx 1.5$~dB & Yes (same slope); array gain 3.01 vs 1.76~dB. \\
-    MRC vs SC, $L = 4$     & \ref{fig:receive}  & 3.2--3.5~dB & Yes (same slope); array gain 6.02 vs 3.19~dB. \\
-    Beamforming vs MRC ($L = 2$) & \ref{fig:transmit} & 0~dB & Yes; same output SNR $\norm{\h}^2\snr$. \\
-    Alamouti vs beamforming / MRC & \ref{fig:transmit} & 3.0~dB & Yes, exactly; no array gain without channel knowledge. \\
-    Single antenna vs Alamouti & \ref{fig:transmit} & 6.3~dB ($10^{-2}$), grows & No; diversity 1 vs 2. \\
+    BPSK vs 4-QAM, AWGN      & \ref{fig:awgn}            & 3.9, 3.3~dB   & No  & tends to 3~dB (half energy per component) \\
+    BPSK vs 4-QAM, fading    & \ref{fig:rayleigh}        & 5.6, 5.5~dB   & Yes & parallel slope-1 lines \\
+    AWGN vs fading, BPSK     & \ref{fig:awgn-vs-fading}  & 17.3, 25.8~dB & No  & exponential vs $1/\snr$ decay \\
+    MRC vs SC, $L = 1$       & \ref{fig:receive}         & 0~dB          & Yes & identical receivers \\
+    MRC vs SC, $L = 2$       & \ref{fig:receive}         & 1.5~dB        & Yes & array gain 3.01 vs 1.76~dB \\
+    MRC vs SC, $L = 4$       & \ref{fig:receive}         & 3.2~dB        & Yes & array gain 6.02 vs 3.19~dB \\
+    Beamforming vs MRC, $L = 2$ & \ref{fig:transmit}    & 0~dB          & Yes & same output SNR \\
+    Alamouti vs beamforming  & \ref{fig:transmit}        & 3.0~dB        & Yes & no channel knowledge, so no array gain \\
+    Single antenna vs Alamouti & \ref{fig:transmit}      & 6.3~dB        & No  & diversity 1 vs 2: the gap grows \\
     \bottomrule
   \end{tabular}
 \end{center}
 
-\textbf{In short:} two curves with the \emph{same} diversity order are parallel at
-high SNR, and the constant gap between them is set by array gain or by the
-modulation. Two curves with \emph{different} diversity orders move further apart as
-the target SER falls.
+\textbf{In short:} curves with the same diversity order are parallel at high SNR and
+differ by a constant gap (array gain or modulation); curves with different diversity
+orders move apart as the SER falls.
 
 \section*{References}
 \begin{enumerate}[label={[\arabic*]},leftmargin=*]
@@ -1116,7 +1290,7 @@ which hold the simulated values and the exact theory side by side.
 raw error count is shown instead (in italics); these points are not plotted.
 
 \begin{table}[htbp]
-  \centering\small
+  \centering\footnotesize
   \caption{Problem~1, AWGN: simulated SER and theory.}
   \label{tab:a-awgn}
   \pgfplotstabletypeset[ser table,
@@ -1131,7 +1305,7 @@ raw error count is shown instead (in italics); these points are not plotted.
 \end{table}
 
 \begin{table}[htbp]
-  \centering\small
+  \centering\footnotesize
   \caption{Problem~1, Rayleigh fading: simulated SER and theory. For 4-QAM both the
            table approximation and the exact value are listed.}
   \label{tab:a-rayleigh}
@@ -1149,7 +1323,7 @@ raw error count is shown instead (in italics); these points are not plotted.
 \end{table}
 
 \begin{table}[htbp]
-  \centering\small
+  \centering\footnotesize
   \setlength{\tabcolsep}{4pt}
   \caption{Problem~2: simulated 4-QAM SER and exact theory. For $L = 1$, MRC and SC
            give identical results, equal to the single-antenna columns of
@@ -1170,7 +1344,7 @@ raw error count is shown instead (in italics); these points are not plotted.
 \end{table}
 
 \begin{table}[htbp]
-  \centering\small
+  \centering\footnotesize
   \setlength{\tabcolsep}{4pt}
   \caption{Problem~3: simulated 4-QAM SER and exact theory.}
   \label{tab:a-transmit}

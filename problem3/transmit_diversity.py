@@ -14,8 +14,8 @@ the average transmitted energy per channel use, the agreement with exact theory,
 the high-SNR slopes, the array gains and the SNR gaps quoted in the discussion.
 
 Run from the repository root:   python -m problem3.transmit_diversity
-Outputs:                        results/q3/transmit_diversity.{csv,png,pdf}
-                                results/q3/transmit_diversity_theory.{csv,png,pdf}
+Outputs:                        results/q3/transmit_diversity.{csv,pdf}, results/q3/images/transmit_diversity.png
+                                results/q3/transmit_diversity_theory.{csv,pdf}, results/q3/images/transmit_diversity_theory.png
                                 results/q3/summary.txt
 """
 from dataclasses import dataclass

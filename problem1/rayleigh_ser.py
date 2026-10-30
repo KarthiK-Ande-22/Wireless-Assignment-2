@@ -6,8 +6,8 @@ figure used to discuss AWGN versus fading: the BPSK / 4-QAM gap, the extra SNR
 that fading costs, and how many errors happen during a deep fade.
 
 Run from the repository root:   python -m problem1.rayleigh_ser
-Outputs:                        results/q1/rayleigh_ser.{csv,png,pdf}
-                                results/q1/awgn_vs_rayleigh.{png,pdf}
+Outputs:                        results/q1/rayleigh_ser.{csv,pdf}, results/q1/images/rayleigh_ser.png
+                                results/q1/awgn_vs_rayleigh.pdf, results/q1/images/awgn_vs_rayleigh.png
                                 results/q1/rayleigh_summary.txt
 """
 from pathlib import Path
@@ -94,7 +94,7 @@ def main():
               SimCurve("4-QAM", ser_qam4, nerr_qam4, PALETTE[1], "s", label="4-QAM, fading (sim.)")],
              comparison, title="AWGN vs Rayleigh fading, N = $10^6$ symbols per SNR point",
              legend_loc="upper right", arrows=fade_arrows)
-    print(f"Saved {OUT_DIR / 'awgn_vs_rayleigh'}.{{png,pdf}}\n")
+    print(f"Saved {OUT_DIR / 'awgn_vs_rayleigh'}.pdf and images/awgn_vs_rayleigh.png\n")
 
     # 6. Numbers quoted in the discussion
     approx, exact = theories[1].ser, theories[2].ser

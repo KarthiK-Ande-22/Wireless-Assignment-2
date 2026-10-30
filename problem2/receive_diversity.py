@@ -9,8 +9,8 @@ with exact theory, the high-SNR slopes, the array gains, the MRC-SC SNR gaps
 and a numerical check of the noise variance of each decision statistic.
 
 Run from the repository root:   python -m problem2.receive_diversity
-Outputs:                        results/q2/receive_diversity.{csv,png,pdf}
-                                results/q2/receive_diversity_theory.{csv,png,pdf}
+Outputs:                        results/q2/receive_diversity.{csv,pdf}, results/q2/images/receive_diversity.png
+                                results/q2/receive_diversity_theory.{csv,pdf}, results/q2/images/receive_diversity_theory.png
                                 results/q2/summary.txt
 """
 from functools import partial

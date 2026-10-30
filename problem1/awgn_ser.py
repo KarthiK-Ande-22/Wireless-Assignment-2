@@ -1,7 +1,7 @@
 """Problem 1, Task 1: SER of BPSK and 4-QAM in the AWGN channel (h = 1).
 
 Run from the repository root:   python -m problem1.awgn_ser
-Outputs:                        results/q1/awgn_ser.{csv,png,pdf}
+Outputs:                        results/q1/awgn_ser.{csv,pdf}, results/q1/images/awgn_ser.png
                                 results/q1/awgn_summary.txt
 """
 from pathlib import Path

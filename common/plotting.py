@@ -1,5 +1,6 @@
 """Shared output for SER experiments: figure (G.7), CSV table and console summary."""
 from dataclasses import dataclass
+from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")   # render to files only, no display needed
@@ -63,7 +64,10 @@ INK = "#333333"   # arrows and annotation text: neutral ink, not a series colour
 
 def plot_ser(path_stem, snr_db, sims, theories, title, ylim=(1e-6, 1),
              figsize=(7, 5), legend_loc="lower left", arrows=(), xlabel="SNR (dB)"):
-    """Semilogy plot of theory (lines) and simulation (open markers); saved as PNG and PDF.
+    """Semilogy plot of theory (lines) and simulation (open markers).
+
+    Saved as `<path_stem>.pdf` (vector, used by the report) and as a PNG copy for
+    quick viewing in an `images/` folder next to it: `<dir>/images/<name>.png`.
 
     `arrows` mark the horizontal SNR gaps between curves. The legend sits inside
     the axes at `legend_loc`.
@@ -99,13 +103,15 @@ def plot_ser(path_stem, snr_db, sims, theories, title, ylim=(1e-6, 1),
     ax.grid(True, which="minor", color="#e8e8e8", linewidth=0.4)
     ax.legend(loc=legend_loc, framealpha=1, edgecolor="#999999")
     fig.tight_layout()
-    fig.savefig(f"{path_stem}.png", dpi=200)
     fig.savefig(f"{path_stem}.pdf", metadata={"CreationDate": None})   # no timestamp: reproducible bytes
+    image_dir = Path(path_stem).parent / "images"                      # PNG copies, e.g. results/q1/images/
+    image_dir.mkdir(exist_ok=True)
+    fig.savefig(image_dir / f"{Path(path_stem).name}.png", dpi=200)
     plt.close(fig)
 
 
 def save_results(path_stem, snr_db, sims, theories, title, **plot_kwargs):
-    """Write `<path_stem>.csv`, `.png` and `.pdf`, and print the SER table."""
+    """Write `<path_stem>.csv`, `.pdf` and `images/<name>.png`, and print the SER table."""
     columns = {"snr_db": snr_db}
     for c in sims:
         columns[f"{c.name} sim"] = c.ser
@@ -122,4 +128,4 @@ def save_results(path_stem, snr_db, sims, theories, title, **plot_kwargs):
     print("".join(f"{name:>{w}}" for name, w in zip(columns, widths)))
     for row in zip(*columns.values()):
         print("".join(f"{value:>{w}.4g}" for value, w in zip(row, widths)))
-    print(f"Saved {path_stem}.{{csv,png,pdf}}\n")
+    print(f"Saved {path_stem}.{{csv,pdf}} and images/{Path(path_stem).name}.png\n")
