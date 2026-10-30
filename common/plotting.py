@@ -1,24 +1,23 @@
-"""Shared output for SER experiments: figure (G.7), CSV table and console summary."""
+"""Figures, CSV tables and printed tables for the SER results."""
 from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib
-matplotlib.use("Agg")   # render to files only, no display needed
+matplotlib.use("Agg")   # save figures to files, no window needed
 import matplotlib.pyplot as plt
 import numpy as np
 
-MIN_ERRORS = 10   # plot only points backed by at least this many errors (G.7)
+MIN_ERRORS = 10   # plot only points with at least 10 errors (assignment rule)
 
-# Fixed categorical colour order: blue, orange, aqua, violet.
-PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#6250d6"]
+PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#6250d6"]   # blue, orange, green, violet
 
-# Typeset figure text in Computer Modern, the font of the LaTeX report.
+# Figure text in Computer Modern, the font of the report
 plt.rcParams.update({
     "font.family": "serif",
-    "font.serif": ["cmr10"],                # Computer Modern, shipped with matplotlib
+    "font.serif": ["cmr10"],
     "mathtext.fontset": "cm",
-    "axes.formatter.use_mathtext": True,    # tick labels 10^{-k} in the same font
-    "axes.unicode_minus": False,            # cmr10 has no Unicode minus sign
+    "axes.formatter.use_mathtext": True,
+    "axes.unicode_minus": False,   # cmr10 has no Unicode minus sign
     "font.size": 12,
     "axes.titlesize": 12,
     "legend.fontsize": 10,
@@ -27,14 +26,14 @@ plt.rcParams.update({
 
 @dataclass
 class SimCurve:
-    """Monte Carlo SER of one scheme, drawn as markers (optionally joined by a line)."""
-    name: str                 # CSV column prefix
+    """Simulated SER of one scheme, drawn with markers."""
+    name: str                 # also used as the CSV column name
     ser: np.ndarray
     n_errors: np.ndarray
     color: str
     marker: str
-    linestyle: str = "none"   # "none": markers only, theory is drawn separately
-    label: str = None         # legend text, defaults to "<name> simulation"
+    linestyle: str = "none"
+    label: str = None         # legend text
 
 
 @dataclass
@@ -45,32 +44,28 @@ class TheoryCurve:
     color: str
     linestyle: str = "-"
     linewidth: float = 1.6
-    in_legend: bool = True    # False: drawn but left out of the legend
-    snr_db: np.ndarray = None # own SNR grid (plot_ser only); default: the figure's grid
+    in_legend: bool = True
+    snr_db: np.ndarray = None # own SNR grid, if different from the figure's
 
 
 @dataclass
 class GapArrow:
-    """Double-headed arrow marking the horizontal SNR gap between two curves at one SER."""
-    snr_from: float           # dB, left end (better curve)
-    snr_to: float             # dB, right end (worse curve)
-    ser: float                # SER level at which the gap is read
-    label: str                # e.g. "3.9 dB"
-    label_side: str = "above" # where the label goes: "above", "below", "left" or "right" of the arrow
+    """Arrow showing the SNR gap between two curves at one SER level."""
+    snr_from: float
+    snr_to: float
+    ser: float
+    label: str
+    label_side: str = "above" # "above", "below", "left" or "right"
 
 
-INK = "#333333"   # arrows and annotation text: neutral ink, not a series colour
+INK = "#333333"   # colour of the arrows and their labels
 
 
 def plot_ser(path_stem, snr_db, sims, theories, title, ylim=(1e-6, 1),
              figsize=(7, 5), legend_loc="lower left", arrows=(), xlabel="SNR (dB)"):
-    """Semilogy plot of theory (lines) and simulation (open markers).
+    """Plot SER curves: theory as lines, simulation as markers.
 
-    Saved as `<path_stem>.pdf` (vector, used by the report) and as a PNG copy for
-    quick viewing in an `images/` folder next to it: `<dir>/images/<name>.png`.
-
-    `arrows` mark the horizontal SNR gaps between curves. The legend sits inside
-    the axes at `legend_loc`.
+    Saves `<path_stem>.pdf` for the report and a PNG copy in the `images/` folder next to it.
     """
     fig, ax = plt.subplots(figsize=figsize)
     for c in theories:
@@ -80,7 +75,7 @@ def plot_ser(path_stem, snr_db, sims, theories, title, ylim=(1e-6, 1),
         reliable = c.n_errors >= MIN_ERRORS
         ax.semilogy(snr_db[reliable], c.ser[reliable], linestyle=c.linestyle,
                     linewidth=1.5, marker=c.marker, markersize=7, color=c.color,
-                    markerfacecolor="none", markeredgewidth=1.5,          # open markers: simulation
+                    markerfacecolor="none", markeredgewidth=1.5,
                     label=c.label or f"{c.name} simulation")
     for a in arrows:
         ax.annotate("", xy=(a.snr_to, a.ser), xytext=(a.snr_from, a.ser),
@@ -96,22 +91,22 @@ def plot_ser(path_stem, snr_db, sims, theories, title, ylim=(1e-6, 1),
     ax.set_xlabel(xlabel)
     ax.set_ylabel(r"Symbol error rate $\hat{P}_e$")
     ax.set_title(title)
-    pad = 0.02 * (snr_db[-1] - snr_db[0])   # keep edge markers fully visible
+    pad = 0.02 * (snr_db[-1] - snr_db[0])   # keep the edge markers fully visible
     ax.set_xlim(snr_db[0] - pad, snr_db[-1] + pad)
     ax.set_ylim(*ylim)
     ax.grid(True, which="major", color="#c8c8c8", linewidth=0.7)
     ax.grid(True, which="minor", color="#e8e8e8", linewidth=0.4)
     ax.legend(loc=legend_loc, framealpha=1, edgecolor="#999999")
     fig.tight_layout()
-    fig.savefig(f"{path_stem}.pdf", metadata={"CreationDate": None})   # no timestamp: reproducible bytes
-    image_dir = Path(path_stem).parent / "images"                      # PNG copies, e.g. results/q1/images/
+    fig.savefig(f"{path_stem}.pdf", metadata={"CreationDate": None})   # no date, so re-runs give identical files
+    image_dir = Path(path_stem).parent / "images"
     image_dir.mkdir(exist_ok=True)
     fig.savefig(image_dir / f"{Path(path_stem).name}.png", dpi=200)
     plt.close(fig)
 
 
 def save_results(path_stem, snr_db, sims, theories, title, **plot_kwargs):
-    """Write `<path_stem>.csv`, `.pdf` and `images/<name>.png`, and print the SER table."""
+    """Save the CSV table and the figure, and print the table."""
     columns = {"snr_db": snr_db}
     for c in sims:
         columns[f"{c.name} sim"] = c.ser
@@ -124,7 +119,7 @@ def save_results(path_stem, snr_db, sims, theories, title, **plot_kwargs):
     plot_ser(path_stem, snr_db, sims, theories, title, **plot_kwargs)
 
     print(title.replace("$", ""))
-    widths = [max(10, len(name) + 2) for name in columns]   # fit each column to its header
+    widths = [max(10, len(name) + 2) for name in columns]
     print("".join(f"{name:>{w}}" for name, w in zip(columns, widths)))
     for row in zip(*columns.values()):
         print("".join(f"{value:>{w}.4g}" for value, w in zip(row, widths)))

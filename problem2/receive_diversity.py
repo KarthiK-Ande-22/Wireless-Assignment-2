@@ -1,17 +1,10 @@
-"""Problem 2: receive diversity over a 1 x L SIMO Rayleigh channel, 4-QAM.
+"""Problem 2: receive diversity with MRC and SC over a 1 x L Rayleigh channel, 4-QAM.
 
-Model (2): y = h x + w, h_l ~ CN(0, 1) i.i.d., w_l ~ CN(0, 1/SNR), h known at
-the receiver and drawn anew for every symbol. For L in {1, 2, 4} and SNR in
-{0, 2, ..., 24} dB, N = 10^6 symbols are simulated; MRC and SC detect the same
-channel and noise realisations. The script also produces the numbers used in
-the discussion: the L = 1 consistency check against Problem 1, the agreement
-with exact theory, the high-SNR slopes, the array gains, the MRC-SC SNR gaps
-and a numerical check of the noise variance of each decision statistic.
+For each L in {1, 2, 4}, MRC and SC detect the same symbols, channels and noise.
 
-Run from the repository root:   python -m problem2.receive_diversity
-Outputs:                        results/q2/receive_diversity.{csv,pdf}, results/q2/images/receive_diversity.png
-                                results/q2/receive_diversity_theory.{csv,pdf}, results/q2/images/receive_diversity_theory.png
-                                results/q2/summary.txt
+Run:     python3 -m problem2.receive_diversity
+Outputs: results/q2/receive_diversity.{csv,pdf}, results/q2/receive_diversity_theory.{csv,pdf},
+         PNG copies in results/q2/images/, results/q2/summary.txt
 """
 from functools import partial
 from math import factorial
@@ -30,24 +23,21 @@ from common.theory import ser_qam4_mrc, ser_qam4_rayleigh_exact, ser_qam4_sc
 
 SEED = 2026
 N_SYMBOLS = 10**6
-SNR_DB = np.arange(0, 25, 2)                          # {0, 2, ..., 24} dB
-N_RX = (1, 2, 4)                                      # numbers of receive antennas L
+SNR_DB = np.arange(0, 25, 2)                          # 0, 2, ..., 24 dB
+N_RX = (1, 2, 4)                                      # number of receive antennas L
 RECEIVERS = {"MRC": mrc_combine, "SC": selection_combine}
-EXACT_THEORY = {"MRC": ser_qam4_mrc, "SC": ser_qam4_sc}   # (snr, L) -> exact 4-QAM SER
+EXACT_THEORY = {"MRC": ser_qam4_mrc, "SC": ser_qam4_sc}
 LINESTYLE = {"MRC": "-", "SC": "--"}                  # solid for MRC, dashed for SC
 MARKER = {"MRC": "o", "SC": "s"}
-SLOPE_SEGMENTS, SLOPE_MIN_ERRORS = 3, 50              # local slopes: last 3 steps, >= 50 errors
-ASYMPTOTIC_DB = (60, 70)                              # SNR range of the asymptotic (exact theory) slope
-GAP_TARGETS = (1e-2, 1e-3, 1e-4)                      # SER levels at which SNR gaps are read
+SLOPE_SEGMENTS, SLOPE_MIN_ERRORS = 3, 50              # slope from the last 3 steps with >= 50 errors
+ASYMPTOTIC_DB = (60, 70)                              # SNR range of the asymptotic (theory) slope
+GAP_TARGETS = (1e-2, 1e-3, 1e-4)                      # SER levels where the MRC / SC gap is measured
 NOISE_CHECK_DB = 10                                   # SNR of the noise-variance check
 OUT_DIR = Path(__file__).resolve().parents[1] / "results" / "q2"
 
 
-# ---------------------------------------------------------------------------
-# Discussion numbers
-# ---------------------------------------------------------------------------
 def noise_variance_check(constellation, rng):
-    """Measured noise variance of each decision statistic r = g x + n, in units of the predicted 1/SNR."""
+    """Measured noise variance of r = g x + n for MRC and SC, divided by 1/SNR (should be 1)."""
     snr = db_to_linear(NOISE_CHECK_DB)
     lines = [f"Noise variance of the decision statistic at {NOISE_CHECK_DB} dB, "
              "measured / predicted 1/SNR (expected 1)",
@@ -55,31 +45,31 @@ def noise_variance_check(constellation, rng):
     for n_rx in N_RX[1:]:
         x = constellation[rng.integers(len(constellation), size=N_SYMBOLS)]
         h, y = simo_rayleigh_channel(x, snr, rng, n_rx)
-        measured = [np.mean(np.abs(r - g * x) ** 2) * snr                     # n = r - g x
+        measured = [np.mean(np.abs(r - g * x) ** 2) * snr   # noise n = r - g x
                     for r, g in (combine(y, h) for combine in RECEIVERS.values())]
         lines.append(f"{n_rx:>4}" + "".join(f"{v:>10.4f}" for v in measured))
     return lines
 
 
 def summarize(results, exact, p1_ser, p1_theory, constellation, rng):
-    """Consistency check, agreement with theory, slopes, array gains, SNR gaps and noise check, as text."""
+    """Text with the numbers used in the discussion."""
     lines = []
 
-    # (a) L = 1: MRC, SC, Problem 1 simulation and Problem 1 exact theory should coincide
+    # L = 1: MRC, SC and Problem 1 should give the same curve
     mrc1, mrc1_err = results["MRC", 1]
     sc1, sc1_err = results["SC", 1]
     lines += ["Consistency check, L = 1 (4-QAM, Rayleigh fading)",
               f"{'SNR_dB':>8}{'MRC L=1':>12}{'SC L=1':>12}{'Problem 1 sim':>16}{'P1 exact theory':>18}"]
     lines += [f"{s:>8}{a:>12.4g}{b:>12.4g}{c:>16.4g}{d:>18.4g}"
               for s, a, b, c, d in zip(SNR_DB, mrc1, sc1, p1_ser, p1_theory)]
-    var_theory = p1_theory * (1 - p1_theory) / N_SYMBOLS                 # Var(P_hat) = P(1-P)/N
+    var_theory = p1_theory * (1 - p1_theory) / N_SYMBOLS
     var_two_sims = (mrc1 * (1 - mrc1) + p1_ser * (1 - p1_ser)) / N_SYMBOLS
     lines += [f"MRC and SC (L = 1) error counts identical at every SNR: {np.array_equal(mrc1_err, sc1_err)}",
               f"max |MRC L=1 - Problem 1 sim|    = {np.abs(z_score(mrc1, p1_ser, var_two_sims)).max():.2f} sigma",
               f"max |MRC L=1 - P1 exact theory|  = {np.abs(z_score(mrc1, p1_theory, var_theory)).max():.2f} sigma",
               ""]
 
-    # (b) Slope of each curve at high SNR versus the predicted diversity order L
+    # High-SNR slope of each curve (should approach the diversity order L)
     lo, hi = db_to_linear(ASYMPTOTIC_DB)
     lines += [f"High-SNR slope: local slopes over the last {SLOPE_SEGMENTS} steps between points "
               f"with >= {SLOPE_MIN_ERRORS} errors;",
@@ -100,20 +90,20 @@ def summarize(results, exact, p1_ser, p1_theory, constellation, rng):
                      f"{fit_exact:>11.2f}{asymptotic:>13.2f}{n_rx:>11}")
     lines.append("")
 
-    # (c) Array gain = E[post-combining SNR] / SNR: E||h||^2 = L for MRC, E[max|h_l|^2] = sum 1/k for SC
+    # Array gain: E||h||^2 = L for MRC, E[max |h_l|^2] = 1 + 1/2 + ... + 1/L for SC
     lines += ["Array gain [2, Sec. 3.4] (dB): theory, with a Monte Carlo estimate in brackets",
               f"{'L':>4}{'MRC':>18}{'SC':>18}{'MRC - SC':>12}"]
     for n_rx in N_RX:
-        mrc_db = 10 * np.log10(n_rx)                                         # E||h||^2 = L
-        sc_db = 10 * np.log10(sum(1 / k for k in range(1, n_rx + 1)))        # E[max_l |h_l|^2] = H_L
-        gains = np.abs(complex_gaussian((N_SYMBOLS, n_rx), 1.0, rng)) ** 2   # |h_l|^2 samples
-        mrc_mc = 10 * np.log10(np.mean(np.sum(gains, axis=1)))               # MRC: SNR scaled by ||h||^2
-        sc_mc = 10 * np.log10(np.mean(np.max(gains, axis=1)))                # SC: SNR scaled by max |h_l|^2
+        mrc_db = 10 * np.log10(n_rx)
+        sc_db = 10 * np.log10(sum(1 / k for k in range(1, n_rx + 1)))
+        gains = np.abs(complex_gaussian((N_SYMBOLS, n_rx), 1.0, rng)) ** 2
+        mrc_mc = 10 * np.log10(np.mean(np.sum(gains, axis=1)))
+        sc_mc = 10 * np.log10(np.mean(np.max(gains, axis=1)))
         lines.append(f"{n_rx:>4}{f'{mrc_db:.2f} ({format_db(mrc_mc)})':>18}"
                      f"{f'{sc_db:.2f} ({format_db(sc_mc)})':>18}{mrc_db - sc_db:>12.2f}")
     lines.append("")
 
-    # (d) SNR needed by MRC and SC, and the horizontal gap between them, at fixed SER
+    # SNR needed by MRC and SC at the target SER levels, and the gap between them
     header = "".join(f"{f'SER {t:.0e}':>16}" for t in GAP_TARGETS)
     lines += ["SNR (dB) at fixed SER read off the simulated curves (exact theory in brackets);",
               "high-SNR limit of the gap SC - MRC: 10 log10(L!) / L",
@@ -125,43 +115,40 @@ def summarize(results, exact, p1_ser, p1_theory, constellation, rng):
         for name in RECEIVERS:
             cells = "".join(f"{f'{format_gap(s)} ({th:.2f})':>16}" for s, th in needed[name])
             lines.append(f"{f'{name} L={n_rx}':>10}{cells}")
-        gaps = "".join(f"{f'{format_gap(sc - mrc)} ({sc_th - mrc_th:.2f})':>16}"     # '-': SER not reached
+        gaps = "".join(f"{f'{format_gap(sc - mrc)} ({sc_th - mrc_th:.2f})':>16}"
                        for (mrc, mrc_th), (sc, sc_th) in zip(needed["MRC"], needed["SC"]))
         lines.append(f"{f'gap L={n_rx}':>10}{gaps}{10 * np.log10(factorial(n_rx)) / n_rx:>10.2f}")
     lines.append("")
 
-    # (e) Agreement of every curve with its exact theory (common/theory.py)
+    # Agreement of every curve with its exact theory
     lines += agreement_lines([(f"{name} L={n_rx} vs exact theory", ser, n_err, exact[name, n_rx])
                               for (name, n_rx), (ser, n_err) in results.items()], N_SYMBOLS)
     lines.append("")
 
-    # (f) Noise variance of the decision statistics (Task 1)
+    # Noise variance of the decision statistics (Task 1)
     lines += noise_variance_check(constellation, rng)
     return "\n".join(lines) + "\n"
 
 
-# ---------------------------------------------------------------------------
-# Main experiment
-# ---------------------------------------------------------------------------
 def main():
-    rng = np.random.default_rng(SEED)                  # seeded once for the whole script
-    constellation = qam4()                             # unit-energy 4-QAM from Problem 1
+    rng = np.random.default_rng(SEED)   # seed set once for the whole script
+    constellation = qam4()
     snr = db_to_linear(SNR_DB)
 
-    # 1. Simulation: for each L, MRC and SC detect the same channel/noise realisations
-    runs = {}                                          # L -> {receiver: (SER, n_err)}
+    # 1. Simulation: for each L, MRC and SC use the same symbols, channels and noise
+    runs = {}
     for n_rx in N_RX:
-        channel = partial(simo_rayleigh_channel, n_rx=n_rx)          # 1 x L SIMO channel of (2)
+        channel = partial(simo_rayleigh_channel, n_rx=n_rx)
         runs[n_rx] = simulate_receivers(constellation, SNR_DB, channel, RECEIVERS, N_SYMBOLS, rng)
-    results = {(name, n_rx): runs[n_rx][name]                        # (receiver, L) -> (SER, n_err),
-               for name in RECEIVERS for n_rx in N_RX}               # MRC L = 1, 2, 4 first, then SC
+    results = {(name, n_rx): runs[n_rx][name]
+               for name in RECEIVERS for n_rx in N_RX}
     exact = {(name, n_rx): EXACT_THEORY[name](snr, n_rx) for name, n_rx in results}
 
-    # 2. Problem 1 reference: the single-antenna fading link (simulation and exact theory)
+    # 2. Problem 1 reference: single-antenna fading curve (simulation and exact theory)
     p1_ser, _ = simulate_ser(constellation, SNR_DB, rayleigh_channel, N_SYMBOLS, rng)
     p1_theory = ser_qam4_rayleigh_exact(snr)
 
-    # 3. Figure and SER table: one colour per L, solid MRC, dashed SC; arrows mark the SC - MRC gap
+    # 3. Main figure: one colour per L, solid MRC, dashed SC, arrows for the MRC / SC gap
     def style(name, n_rx):
         return PALETTE[N_RX.index(n_rx)], MARKER[name]
 
@@ -169,9 +156,9 @@ def main():
                      label=f"{name}, L = {n_rx}")
             for (name, n_rx), (ser, n_err) in results.items()]
     reference = TheoryCurve("Problem 1 (exact theory)", p1_theory,
-                            color="#c4c4c4", linewidth=8)   # wide band behind the L = 1 curves
+                            color="#c4c4c4", linewidth=8)   # grey band behind the L = 1 curves
     arrows = []
-    for n_rx, side in ((2, "right"), (4, "left")):                   # label where the plot is free
+    for n_rx, side in ((2, "right"), (4, "left")):   # label placed where the plot is empty
         mrc_db, sc_db = (snr_at_ser(SNR_DB, *results[name, n_rx], 1e-3) for name in RECEIVERS)
         arrows.append(GapArrow(mrc_db, sc_db, 1e-3, f"L = {n_rx}: {sc_db - mrc_db:.1f} dB", side))
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -179,7 +166,7 @@ def main():
                  title="Receive diversity (MRC vs SC), 4-QAM, N = $10^6$ symbols per SNR point",
                  legend_loc="lower left", arrows=arrows)
 
-    # 4. Extra figure: the same simulated points (markers) against exact theory (lines)
+    # 4. Extra figure: the same points against exact theory
     markers = [SimCurve(c.name, c.ser, c.n_errors, c.color, c.marker, label=c.label) for c in sims]
     theory_lines = [TheoryCurve(f"{name} L={n_rx} exact theory", exact[name, n_rx], *style(name, n_rx)[:1],
                                 LINESTYLE[name], in_legend=False) for name, n_rx in results]
@@ -187,7 +174,7 @@ def main():
                  title="Receive diversity: simulation (markers) vs exact theory (lines)",
                  legend_loc="lower left")
 
-    # 5. Numbers for the discussion
+    # 5. Summary numbers used in the report
     summary = summarize(results, exact, p1_ser, p1_theory, constellation, rng)
     (OUT_DIR / "summary.txt").write_text(summary)
     print(summary)

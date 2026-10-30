@@ -1,8 +1,7 @@
 """Problem 1, Task 1: SER of BPSK and 4-QAM in the AWGN channel (h = 1).
 
-Run from the repository root:   python -m problem1.awgn_ser
-Outputs:                        results/q1/awgn_ser.{csv,pdf}, results/q1/images/awgn_ser.png
-                                results/q1/awgn_summary.txt
+Run:     python3 -m problem1.awgn_ser
+Outputs: results/q1/awgn_ser.{csv,pdf}, results/q1/images/awgn_ser.png, results/q1/awgn_summary.txt
 """
 from pathlib import Path
 
@@ -17,14 +16,14 @@ from common.theory import ser_bpsk_awgn, ser_qam4_awgn
 
 SEED = 2026
 N_SYMBOLS = 10**6
-SNR_DB = np.arange(0, 13, 1)   # {0, 1, ..., 12} dB
-GAP_TARGETS = (1e-2, 1e-3, 1e-4)   # SER levels at which the BPSK / 4-QAM gap is read
-ARROW_TARGETS = (1e-2, 1e-4)       # gaps marked with arrows in the figure
+SNR_DB = np.arange(0, 13, 1)        # 0, 1, ..., 12 dB
+GAP_TARGETS = (1e-2, 1e-3, 1e-4)    # SER levels where the BPSK / 4-QAM gap is measured
+ARROW_TARGETS = (1e-2, 1e-4)        # gaps shown as arrows in the figure
 OUT_DIR = Path(__file__).resolve().parents[1] / "results" / "q1"
 
 
 def main():
-    rng = np.random.default_rng(SEED)
+    rng = np.random.default_rng(SEED)   # seed set once for the whole script
     snr = db_to_linear(SNR_DB)
 
     # 1. Simulation
@@ -37,20 +36,20 @@ def main():
     theories = [TheoryCurve("BPSK theory", ser_bpsk_awgn(snr), PALETTE[0]),
                 TheoryCurve("4-QAM theory", ser_qam4_awgn(snr), PALETTE[1])]
 
-    # 3. SNR needed by each scheme at fixed SER: simulation and theory
+    # 3. SNR needed by each scheme at the target SER levels (simulation and theory)
     needed = {t: (snr_at_ser(SNR_DB, ser_bpsk, nerr_bpsk, t), snr_at_ser(SNR_DB, ser_qam4, nerr_qam4, t),
                   theory_snr_at_ser(ser_bpsk_awgn, t), theory_snr_at_ser(ser_qam4_awgn, t))
               for t in GAP_TARGETS}
     arrows = [GapArrow(needed[t][0], needed[t][1], t, f"{needed[t][1] - needed[t][0]:.1f} dB")
-              for t in ARROW_TARGETS]                                  # measured BPSK -> 4-QAM gap
+              for t in ARROW_TARGETS]
 
-    # 4. Plot and save
+    # 4. Figure and CSV table
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     save_results(OUT_DIR / "awgn_ser", SNR_DB, sims, theories,
                  title="AWGN channel, ML detection, N = $10^6$ symbols per SNR point",
                  arrows=arrows)
 
-    # 5. Numbers quoted in the discussion
+    # 5. Summary numbers used in the report
     lines = agreement_lines([("BPSK vs BPSK theory", ser_bpsk, nerr_bpsk, theories[0].ser),
                              ("4-QAM vs 4-QAM theory", ser_qam4, nerr_qam4, theories[1].ser)],
                             N_SYMBOLS)
