@@ -1,0 +1,61 @@
+Consistency check, L = 1 (4-QAM, Rayleigh fading)
+  SNR_dB     MRC L=1      SC L=1   Problem 1 sim   P1 exact theory
+       0       0.366       0.366          0.3649            0.3651
+       2       0.293       0.293          0.2941            0.2934
+       4      0.2249      0.2249          0.2243            0.2247
+       6      0.1645      0.1645          0.1649            0.1644
+       8      0.1156      0.1156          0.1155            0.1155
+      10     0.07877     0.07877         0.07866           0.07857
+      12     0.05194     0.05194         0.05214           0.05217
+      14     0.03423     0.03423         0.03382           0.03405
+      16     0.02188     0.02188         0.02201           0.02196
+      18     0.01411     0.01411           0.014           0.01406
+      20    0.008817    0.008817        0.008822           0.00895
+      22    0.005688    0.005688        0.005706           0.00568
+      24    0.003689    0.003689        0.003557          0.003597
+MRC and SC (L = 1) error counts identical at every SNR: True
+max |MRC L=1 - Problem 1 sim|    = 1.69 sigma
+max |MRC L=1 - P1 exact theory|  = 1.85 sigma
+
+High-SNR slope: local slopes over the last 3 steps between points with >= 50 errors;
+least-squares fit over the same points (simulation and exact theory); exact theory over 60-70 dB
+  receiver   L     SNR points (dB)            local slopes  fit sim  fit exact  exact 60-70  predicted
+       MRC   1      18, 20, 22, 24    1.02 -> 0.95 -> 0.94     0.97       0.99         1.00          1
+       MRC   2      16, 18, 20, 22    1.97 -> 2.07 -> 1.99     2.01       1.96         2.00          2
+       MRC   4         4, 6, 8, 10    2.60 -> 2.78 -> 3.40     2.91       2.94         4.00          4
+        SC   1      18, 20, 22, 24    1.02 -> 0.95 -> 0.94     0.97       0.99         1.00          1
+        SC   2      16, 18, 20, 22    1.98 -> 1.78 -> 2.42     2.03       1.93         2.00          2
+        SC   4       8, 10, 12, 14    2.59 -> 3.15 -> 3.22     3.00       2.98         4.00          4
+
+Array gain [2, Sec. 3.4] (dB): theory, with a Monte Carlo estimate in brackets
+   L               MRC                SC    MRC - SC
+   1       0.00 (0.00)       0.00 (0.00)        0.00
+   2       3.01 (3.01)       1.76 (1.76)        1.25
+   4       6.02 (6.02)       3.19 (3.19)        2.83
+
+SNR (dB) at fixed SER read off the simulated curves (exact theory in brackets);
+high-SNR limit of the gap SC - MRC: 10 log10(L!) / L
+                 SER 1e-02       SER 1e-03       SER 1e-04     limit
+   MRC L=1   19.46 (19.51)       - (29.58)       - (39.59)
+    SC L=1   19.46 (19.51)       - (29.58)       - (39.59)
+   gap L=1     0.00 (0.00)        - (0.00)        - (0.00)      0.00
+   MRC L=2   10.13 (10.14)   15.59 (15.60)   20.57 (20.73)
+    SC L=2   11.63 (11.61)   17.05 (17.09)   21.89 (22.24)
+   gap L=2     1.50 (1.47)     1.46 (1.49)     1.32 (1.50)      1.51
+   MRC L=4     4.40 (4.46)     8.08 (8.01)   10.92 (11.02)
+    SC L=4     7.66 (7.69)   11.28 (11.34)   14.39 (14.40)
+   gap L=4     3.26 (3.23)     3.20 (3.33)     3.47 (3.38)      3.45
+
+Agreement with theory over the plotted points (>= 10 errors), sigma = sqrt(P (1 - P) / N)
+                simulation vs theory  points  mean dev.  max |dev.|  max |z|
+             MRC L=1 vs exact theory      13      +0.1%        2.6%     1.85
+             MRC L=2 vs exact theory      13      -1.6%        7.5%     1.03
+             MRC L=4 vs exact theory       8      +1.0%       21.0%     2.01
+              SC L=1 vs exact theory      13      +0.1%        2.6%     1.85
+              SC L=2 vs exact theory      13      -2.3%       17.5%     1.64
+              SC L=4 vs exact theory       9      +0.3%        6.8%     1.12
+
+Noise variance of the decision statistic at 10 dB, measured / predicted 1/SNR (expected 1)
+   L       MRC        SC
+   2    0.9986    0.9987
+   4    0.9993    1.0003

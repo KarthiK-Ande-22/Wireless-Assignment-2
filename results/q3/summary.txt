@@ -1,0 +1,45 @@
+Average transmitted energy per channel use, measured over all SNR points
+          scheme                     scaling       total (min / max)       per antenna
+  Single antenna                       s = x     1.000000 / 1.000000            1.0000
+     Beamforming      s_l = (h_l* / ||h||) x     1.000000 / 1.000000   0.5000 / 0.5000
+        Alamouti    s_l = +-x_k(*) / sqrt(2)     1.000000 / 1.000000   0.5000 / 0.5000
+
+Consistency checks
+max |single antenna - Problem 1 exact theory| = 1.85 sigma
+max |beamforming - MRC L=2|                   = 1.51 sigma
+
+Agreement with theory over the plotted points (>= 10 errors), sigma = sqrt(P (1 - P) / N)
+                simulation vs theory  points  mean dev.  max |dev.|  max |z|
+      Single antenna vs exact theory      13      +0.1%        2.6%     1.85
+         Beamforming vs exact theory      13      -3.1%       24.7%     2.06
+            Alamouti vs exact theory      13      -2.1%       27.0%     2.55
+             MRC L=2 vs exact theory      13      +1.4%       19.6%     1.85
+
+High-SNR slope: local slopes over the last 3 steps between points with >= 50 errors;
+least-squares fit over the same points (simulation and exact theory); exact theory over 60-70 dB
+          scheme     SNR points (dB)            local slopes  fit sim  fit exact  exact 60-70  predicted
+  Single antenna      18, 20, 22, 24    1.02 -> 0.95 -> 0.94     0.97       0.99         1.00          1
+     Beamforming      14, 16, 18, 20    1.90 -> 1.77 -> 2.26     1.96       1.93         2.00          2
+        Alamouti      18, 20, 22, 24    1.94 -> 1.99 -> 2.61     2.16       1.94         2.00          2
+         MRC L=2      16, 18, 20, 22    1.83 -> 2.10 -> 2.04     2.00       1.96         2.00          2
+
+Array gain E|g|^2 (dB): theory, with the value measured in the simulation in brackets
+          scheme        array gain
+  Single antenna       0.00 (0.00)
+     Beamforming       3.01 (3.01)
+        Alamouti       0.00 (0.00)
+         MRC L=2              3.01   (measured in Problem 2)
+
+SNR (dB) at fixed SER read off the simulated curves (exact theory in brackets)
+                        scheme         SER 1e-02         SER 1e-03         SER 1e-04
+                Single antenna     19.46 (19.51)         - (29.58)         - (39.59)
+                   Beamforming     10.15 (10.14)     15.61 (15.60)     20.51 (20.73)
+                      Alamouti     13.15 (13.15)     18.62 (18.61)     23.28 (23.75)
+                       MRC L=2     10.17 (10.14)     15.59 (15.60)     20.69 (20.73)
+
+SNR gap (dB) = SNR of the first scheme - SNR of the second, at the same SER (exact theory in brackets)
+                          pair         SER 1e-02         SER 1e-03         SER 1e-04
+        Alamouti - Beamforming       3.00 (3.01)       3.01 (3.01)       2.78 (3.01)
+            Alamouti - MRC L=2       2.98 (3.01)       3.03 (3.01)       2.60 (3.01)
+         Beamforming - MRC L=2      -0.02 (0.00)       0.02 (0.00)      -0.18 (0.00)
+     Single antenna - Alamouti       6.32 (6.36)         - (10.97)         - (15.84)

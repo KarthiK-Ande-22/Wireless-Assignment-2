@@ -1,0 +1,27 @@
+Overall check: every plotted point (n_err >= 10) against its exact theory,
+z = (n_err - N p) / sqrt(N p (1 - p)), N = 10^6
+Counted once (identical error counts at every SNR): MRC L=1 and SC L=1 of Problem 2,
+and the single-antenna curve of Problem 3.
+
+ problem  curve                      points  max |z|
+       1  BPSK, AWGN                     10     2.59
+       1  4-QAM, AWGN                    13     1.95
+       1  BPSK, fading                   21     3.02
+       1  4-QAM, fading                  21     1.78
+       2  MRC, L = 1 (= SC, L = 1)       13     1.85
+       2  MRC, L = 2                     13     1.03
+       2  MRC, L = 4                      8     2.01
+       2  SC, L = 2                      13     1.64
+       2  SC, L = 4                       9     1.12
+       3  Beamforming                    13     2.06
+       3  Alamouti                       13     2.55
+       3  MRC, L = 2                     13     1.85
+
+Statistics over all 160 independent points
+                              measured    expected if unbiased
+points with |z| < 1              71.2%                   68.3%
+points with |z| < 2              95.0%                   95.4%
+points with |z| < 3              99.4%                   99.7%
+largest |z|                       3.02      (reached by chance in 33% of runs)
+mean of z (bias)                +0.079               0 +- 0.08
+mean of z^2                       0.97               1 +- 0.11

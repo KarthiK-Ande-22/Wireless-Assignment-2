@@ -1,0 +1,11 @@
+Agreement with theory over the plotted points (>= 10 errors), sigma = sqrt(P (1 - P) / N)
+                simulation vs theory  points  mean dev.  max |dev.|  max |z|
+                 BPSK vs BPSK theory      10      +3.0%       19.0%     2.59
+               4-QAM vs 4-QAM theory      13      -1.3%        8.2%     1.95
+
+SNR (dB) needed for a target SER: simulation (theory in brackets)
+     SER            BPSK           4-QAM    gap 4-QAM - BPSK
+   1e-02     4.31 (4.32)     8.18 (8.22)         3.87 (3.89)
+   1e-03     6.76 (6.79)   10.30 (10.35)         3.54 (3.56)
+   1e-04     8.44 (8.40)   11.74 (11.80)         3.30 (3.40)
+High-SNR limit of the gap: 10 log10(2) = 3.01 dB

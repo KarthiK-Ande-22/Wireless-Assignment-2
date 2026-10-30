@@ -1,0 +1,33 @@
+Agreement with theory over the plotted points (>= 10 errors), sigma = sqrt(P (1 - P) / N)
+                simulation vs theory  points  mean dev.  max |dev.|  max |z|
+                 BPSK vs BPSK theory      21      +1.4%       13.7%     3.02
+     4-QAM vs 4-QAM theory (approx.)      21     -10.8%       16.0%   115.83
+       4-QAM vs 4-QAM theory (exact)      21      -1.1%        7.6%     1.78
+
+4-QAM approximation / exact - 1 (overestimate of the table expression)
+  0 dB: +15.8%, 10 dB: +10.9%, 20 dB: +10.1%, 30 dB: +10.0%, 40 dB: +10.0%
+
+High-SNR slope (diversity order): least-squares fit over 30-40 dB
+    BPSK: 1.02
+   4-QAM: 1.02
+
+SNR (dB) needed in fading: simulation (exact theory in brackets)
+     SER            BPSK           4-QAM    gap 4-QAM - BPSK
+   1e-02   13.94 (13.85)   19.50 (19.51)         5.56 (5.66)
+   1e-03   24.06 (23.97)   29.58 (29.58)         5.53 (5.61)
+   1e-04   34.19 (33.98)   39.30 (39.59)         5.11 (5.61)
+High-SNR forms: BPSK Pe -> 0.2500 / SNR, 4-QAM Pe -> 0.9092 / SNR; gap limit 5.61 dB
+
+Price of fading: SNR (dB) for a target SER, AWGN (theory) vs Rayleigh (simulation)
+  scheme     SER      AWGN    Rayleigh   extra SNR
+    BPSK   1e-03      6.79       24.06       17.27
+    BPSK   1e-04      8.40       34.19       25.79
+   4-QAM   1e-03     10.35       29.58       19.24
+   4-QAM   1e-04     11.80       39.30       27.50
+
+Deep fades (|h|^2 SNR < 1), BPSK in Rayleigh fading, N = 10^6 symbols per point
+  SNR_dB  symbols in deep fade   errors  errors in deep fade
+      10               9.5474%    23570                77.0%
+      20               0.9953%     2506                74.3%
+      30               0.1006%      236                69.5%
+      40               0.0097%       24                83.3%
