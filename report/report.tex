@@ -324,60 +324,161 @@ formula of the assignment table, explained in Sec.~\ref{sec:p1-agreement}.
 \section{Problem 1 --- SER in AWGN and Rayleigh fading}
 \label{sec:p1}
 
-\textbf{Model.} $y = hx + w$ with $w \sim \CN(0, 1/\snr)$ and the ML rule
-$\hat\imath = \arg\min_i \abs{y - h u_i}^2$, with $h = 1$ for AWGN and
-$h \sim \CN(0,1)$ known at the receiver for fading (coherent detection). The
-theory curves use the formulas of the assignment table, with $Q(\cdot)$
-implemented separately:
+Problem~1 measures the SER of BPSK and 4-QAM over the channel
 \begin{equation}
-  \begin{aligned}
-    \text{AWGN:}\quad
-    & \Pe^{\mathrm{BPSK}} = Q\big(\sqrt{2\snr}\big), &
-    & \Pe^{\mathrm{4QAM}} = 2Q\big(\sqrt{\snr}\big) - Q^2\big(\sqrt{\snr}\big),\\
-    \text{Rayleigh:}\quad
-    & \Pe^{\mathrm{BPSK}} = \tfrac12\Big(1 - \sqrt{\tfrac{\snr}{1+\snr}}\Big), &
-    & \Pe^{\mathrm{4QAM}} \approx 2\cdot\tfrac12\Big(1 - \sqrt{\tfrac{\snr/2}{1+\snr/2}}\Big).
-  \end{aligned}
-  \label{eq:p1-theory}
+  y = hx + w, \qquad x \in \mathcal{X}, \qquad w \sim \CN(0, 1/\snr),
+  \label{eq:p1-channel}
 \end{equation}
+with $h = 1$ in Task~1 (AWGN) and $h \sim \CN(0,1)$ in Task~2 (Rayleigh fading). Both
+tasks use the unit-energy constellations, the ML detector and the error counting of
+Sec.~\ref{sec:setup}. In both channels the receiver knows $h$, so the ML decision is
+\begin{equation}
+  \hat\imath = \arg\min_{i} \abs{y - h\,u_i}^2 .
+  \label{eq:p1-ml}
+\end{equation}
+Each task below first derives the theoretical SER, then describes the simulation and
+shows its figure. The results are discussed in Sec.~\ref{sec:p1-discussion}.
+
+\subsection{Task 1: AWGN channel}
+\label{sec:p1-task1}
+
+\textbf{Theoretical expressions.} With $h = 1$ the receiver sees $y = x + w$. The
+real and imaginary parts of $w$ are independent, each $\mathcal{N}\big(0, 1/(2\snr)\big)$.
+The Gaussian tail function $Q(a) = \tfrac12\,\mathrm{erfc}(a/\sqrt2)$ is implemented as its
+own function (\code{qfunc}).
+\begin{itemize}
+  \item \textbf{BPSK.} The points $\pm1$ are separated by the threshold
+        $\mathrm{Re}\{y\} = 0$, at distance 1 from each point. An error happens when the
+        real part of the noise is larger than 1 in the wrong direction:
+        \begin{equation}
+          \Pe^{\mathrm{BPSK}} = \Pr\Big[\mathcal{N}\big(0, \tfrac{1}{2\snr}\big) > 1\Big]
+                            = Q\big(\sqrt{2\snr}\big).
+          \label{eq:p1-awgn-bpsk}
+        \end{equation}
+  \item \textbf{4-QAM.} The points $(\pm1 \pm j)/\sqrt2$ are two BPSK signals, one on I and
+        one on Q, each with amplitude $1/\sqrt2$ (half the energy) and its own
+        independent noise. One component is wrong with probability
+        $q = Q\big((1/\sqrt2)\big/\sqrt{1/(2\snr)}\big) = Q(\sqrt{\snr})$. The symbol is
+        correct only if both components are correct:
+        \begin{equation}
+          \Pe^{\mathrm{4QAM}} = 1 - (1-q)^2 = 2Q\big(\sqrt{\snr}\big) - Q^2\big(\sqrt{\snr}\big).
+          \label{eq:p1-awgn-qam}
+        \end{equation}
+        An error in one or in both components counts as one symbol error.
+\end{itemize}
+
+\textbf{Simulation.} The script \code{problem1/awgn_ser.py} runs Algorithm~1 for
+$\snrdb \in \{0, 1, \dots, 12\}$. For each modulation and SNR it draws $N = 10^6$
+equiprobable indices, sends $x = u_i$ through $y = x + w$, detects with
+\eqref{eq:p1-ml} and counts the errors. The expressions \eqref{eq:p1-awgn-bpsk} and
+\eqref{eq:p1-awgn-qam} are evaluated at the same SNR points. Fig.~\ref{fig:awgn}
+shows both schemes on one figure: simulation as markers, theory as lines.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.8\linewidth]{q1/awgn_ser.pdf}
+  \includegraphics[width=0.74\linewidth]{q1/awgn_ser.pdf}
   \caption{Problem~1, Task~1: SER of BPSK and 4-QAM in the AWGN channel ($h = 1$)
            with ML detection. Markers: Monte Carlo simulation with $N = 10^6$
            symbols per SNR point, $\snrdb \in \{0, 1, \dots, 12\}$; only points with
-           $\nerr \ge 10$ are shown. Lines: theory \eqref{eq:p1-theory}. Arrows: the
+           $\nerr \ge 10$ are shown. Lines: theory \eqref{eq:p1-awgn-bpsk} and
+           \eqref{eq:p1-awgn-qam}. Arrows: the
            measured SNR gap between the two schemes, 3.9~dB at $10^{-2}$ and 3.3~dB at
-           $10^{-4}$.}
+           $10^{-4}$. \textbf{The BPSK--4-QAM gap is not constant: it shrinks towards
+           3~dB as the SNR grows} (Sec.~\ref{sec:p1-gaps}).}
   \label{fig:awgn}
 \end{figure}
 
+\subsection{Task 2: Rayleigh fading channel}
+\label{sec:p1-task2}
+
+\textbf{Channel.} A new $h \sim \CN(0,1)$ is drawn for every symbol and is known at
+the receiver (coherent detection). For a given $h$, the link is an AWGN link whose
+SNR is multiplied by the channel power gain $g = \abs{h}^2$. Since $h \sim \CN(0,1)$,
+$g$ is exponential, $f_g(g) = e^{-g}$ for $g \ge 0$, with $\E[g] = 1$. So $\snr$ is
+also the average received SNR.
+
+\textbf{Theoretical expressions.} Each fading result is the AWGN result for a fixed
+$g$, averaged over the distribution of $g$.
+\begin{itemize}
+  \item \textbf{BPSK.} For a fixed $g$, \eqref{eq:p1-awgn-bpsk} becomes
+        $Q\big(\sqrt{2g\snr}\big)$. Averaging over $g$ gives the result of
+        [1, Sec.~5.2]:
+        \begin{equation}
+          \Pe^{\mathrm{BPSK}} = \int_0^\infty Q\big(\sqrt{2g\snr}\big)\,e^{-g}\,dg
+          = \frac12\Big(1 - \sqrt{\frac{\snr}{1+\snr}}\Big).
+          \label{eq:p1-ray-bpsk}
+        \end{equation}
+  \item \textbf{4-QAM, formula of the assignment table.} Twice the BPSK result at half
+        the SNR:
+        \begin{equation}
+          \Pe^{\mathrm{4QAM}} \approx 2\cdot\frac12\Big(1 - \sqrt{\frac{\snr/2}{1+\snr/2}}\Big).
+          \label{eq:p1-ray-qam}
+        \end{equation}
+        This is the probability of an I error plus the probability of a Q error. It
+        leaves out the event that both are wrong, so it is an approximation (an upper
+        bound).
+  \item \textbf{4-QAM, exact (extra, for checking).} Averaging the complete AWGN
+        expression \eqref{eq:p1-awgn-qam}, with $q = Q\big(\sqrt{g\snr}\big)$, over $g$
+        gives, with Craig's formula (Sec.~\ref{sec:exact}),
+        \begin{equation}
+          \Pe^{\mathrm{4QAM}} = \int_0^\infty \big[2q - q^2\big]\,e^{-g}\,dg
+          = (1-\mu) - \tfrac14\Big[1 - \tfrac4\pi\,\mu\arctan\tfrac1\mu\Big],
+          \qquad \mu = \sqrt{\frac{\snr/2}{1+\snr/2}} .
+          \label{eq:p1-ray-exact}
+        \end{equation}
+        The first term, $1-\mu$, is exactly the table formula \eqref{eq:p1-ray-qam}; the
+        second is the dropped ``both wrong'' term. This curve is only used to explain
+        the simulated 4-QAM points; the comparison asked for in Task~2 uses
+        \eqref{eq:p1-ray-qam}.
+\end{itemize}
+
+\textbf{Simulation.} The script \code{problem1/rayleigh_ser.py} runs Algorithm~1 for
+$\snrdb \in \{0, 2, \dots, 40\}$, with a fresh $h$ and $w$ for every symbol and
+$N = 10^6$ symbols per modulation and SNR point. The detector \eqref{eq:p1-ml} uses
+the known $h$. Fig.~\ref{fig:rayleigh} shows the simulation with the expressions
+\eqref{eq:p1-ray-bpsk}--\eqref{eq:p1-ray-exact}. Fig.~\ref{fig:awgn-vs-fading} is an
+extra figure that places the AWGN theory of Task~1 next to the fading results; it is
+used in the discussion of Sec.~\ref{sec:p1-deep-fade}.
+
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.8\linewidth]{q1/rayleigh_ser.pdf}
+  \includegraphics[width=0.74\linewidth]{q1/rayleigh_ser.pdf}
   \caption{Problem~1, Task~2: SER of BPSK and 4-QAM in Rayleigh fading with coherent
            ML detection. Markers: simulation with $N = 10^6$ symbols per SNR point,
            $\snrdb \in \{0, 2, \dots, 40\}$, points with $\nerr \ge 10$. Solid lines:
-           assignment table \eqref{eq:p1-theory} (an approximation for 4-QAM).
-           Dotted: exact 4-QAM SER (Sec.~\ref{sec:exact}). Arrows: the BPSK--4-QAM
-           gap, nearly constant at about 5.5~dB.}
+           assignment table \eqref{eq:p1-ray-bpsk} and \eqref{eq:p1-ray-qam} (an
+           approximation for 4-QAM). Dotted: exact 4-QAM SER \eqref{eq:p1-ray-exact}.
+           Arrows: the measured
+           BPSK--4-QAM gap, 5.6~dB at $10^{-2}$ and 5.5~dB at $10^{-3}$.
+           \textbf{The gap is nearly constant, about 5.5~dB: both curves are parallel
+           lines of slope $\boldsymbol{-1}$} (Sec.~\ref{sec:p1-gaps}).}
   \label{fig:rayleigh}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.8\linewidth]{q1/awgn_vs_rayleigh.pdf}
+  \includegraphics[width=0.74\linewidth]{q1/awgn_vs_rayleigh.pdf}
   \caption{Extra figure: AWGN (dashed, theory) against Rayleigh fading (solid lines:
            theory; markers: the simulation of Fig.~\ref{fig:rayleigh}, $N = 10^6$
            symbols per SNR point, 0--40~dB). Dotted: deep-fade probability
            $\Pr[\abs{h}^2\snr < 1] = 1 - e^{-1/\snr} \approx 1/\snr$. Arrows: the extra
            SNR that BPSK needs in fading, 17.3~dB at $10^{-3}$ and 25.8~dB at
-           $10^{-4}$.}
+           $10^{-4}$. \textbf{The AWGN--fading gap is not constant: it grows as the
+           target SER falls} (Sec.~\ref{sec:p1-gaps}).}
   \label{fig:awgn-vs-fading}
 \end{figure}
 
-\subsection{Agreement between simulation and theory}
+\FloatBarrier   % all three figures before the discussion
+\subsection{Discussion}
+\label{sec:p1-discussion}
+
+The assignment asks for two points: the agreement between simulation and theory,
+with the reason for any deviation (Sec.~\ref{sec:p1-agreement}), and the difference
+between the AWGN and fading curves at high SNR, explained with the deep-fade argument
+(Sec.~\ref{sec:p1-deep-fade}). Sec.~\ref{sec:p1-gaps} explains the gaps marked by the
+arrows in Figs.~\ref{fig:awgn}--\ref{fig:awgn-vs-fading}.
+
+\subsubsection{Agreement between simulation and theory}
 \label{sec:p1-agreement}
 
 \begin{itemize}
@@ -416,7 +517,8 @@ implemented separately:
         \end{itemize}
 \end{itemize}
 
-\subsection{AWGN versus fading at high SNR: the deep-fade argument}
+\subsubsection{AWGN versus fading at high SNR: the deep-fade argument}
+\label{sec:p1-deep-fade}
 
 \textbf{What the figures show.}
 \begin{itemize}
@@ -485,7 +587,8 @@ symbols cause about three quarters of all errors at every SNR.
 The penalty grows as the target SER falls (arrows in Fig.~\ref{fig:awgn-vs-fading}).
 Reducing it is the purpose of the diversity schemes of Problems~2 and~3.
 
-\subsection{Gaps between the curves (arrows in the figures)}
+\subsubsection{Gaps between the curves (arrows in the figures)}
+\label{sec:p1-gaps}
 
 \begin{itemize}
   \item \textbf{BPSK versus 4-QAM in AWGN: not constant} (Fig.~\ref{fig:awgn}).
