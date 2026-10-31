@@ -81,7 +81,7 @@
 
 %% ================================================================ title
 \begin{center}
-  {\LARGE EC5.407 Wireless Communications --- Assignment 2}\\[5pt]
+  {\LARGE EC5.407 Wireless Communications - Assignment 2}\\[5pt]
   {\large Detection and Diversity in AWGN and Fading Channels}\\[12pt]
   {\large \studentname \qquad \rollnumber}
 \end{center}
@@ -401,8 +401,7 @@ also the average received SNR.
 $g$, averaged over the distribution of $g$.
 \begin{itemize}
   \item \textbf{BPSK.} For a fixed $g$, \eqref{eq:p1-awgn-bpsk} becomes
-        $Q\big(\sqrt{2g\snr}\big)$. Averaging over $g$ gives the result of
-        [1, Sec.~5.2]:
+        $Q\big(\sqrt{2g\snr}\big)$. Averaging over $g$ gives:
         \begin{equation}
           \Pe^{\mathrm{BPSK}} = \int_0^\infty Q\big(\sqrt{2g\snr}\big)\,e^{-g}\,dg
           = \frac12\Big(1 - \sqrt{\frac{\snr}{1+\snr}}\Big).
@@ -532,7 +531,7 @@ arrows in Figs.~\ref{fig:awgn}--\ref{fig:awgn-vs-fading}.
         $\Pe^{\mathrm{BPSK}} \approx 1/(4\snr)$ and $\Pe^{\mathrm{4QAM}} \approx 0.909/\snr$.
 \end{itemize}
 
-\textbf{Why: errors come from deep fades} [1, Sec.~5.4].
+\textbf{Why: errors come from deep fades.}
 \begin{enumerate}
   \item For a given channel, the link is an AWGN link whose SNR is scaled by
         $\abs{h}^2$: $\Pe(h) = Q\big(\sqrt{2\abs{h}^2\snr}\big)$ for BPSK.
@@ -675,7 +674,7 @@ In the code these are \code{mrc_combine} and \code{selection_combine}
 \subsubsection{Maximal ratio combining (MRC)}
 \label{sec:p2-mrc}
 
-\textbf{Combining} [2, Secs.~3.1--3.2]. Each branch is multiplied by its conjugate
+\textbf{Combining.} Each branch is multiplied by its conjugate
 channel gain $h_\ell^*$ and the branches are added:
 \begin{equation*}
   \h^H\y = \sum_{\ell=1}^{L} h_\ell^*\,y_\ell = \norm{\h}^2 x + \h^H\w .
@@ -711,7 +710,7 @@ metric multiplied by a positive constant, so it is also ML.
 \subsubsection{Selection combining (SC)}
 \label{sec:p2-sc}
 
-\textbf{Selection} [2, Sec.~3.5]. The receiver keeps only the antenna with the
+\textbf{Selection.} The receiver keeps only the antenna with the
 largest instantaneous channel gain,
 \begin{equation}
   \ell^\star = \arg\max_\ell \abs{h_\ell}^2, \qquad
@@ -760,7 +759,7 @@ for the $L = 1$ consistency check, and the arrows mark the MRC--SC gap at $10^{-
 Fig.~\ref{fig:receive-theory} is an extra figure that compares the same points with
 the exact theory of Sec.~\ref{sec:exact}.
 
-\textbf{What the figures should show.} Three predictions from [2] are checked in the
+\textbf{What the figures should show.} Three predictions from theory are checked in the
 discussion:
 \begin{itemize}
   \item \emph{$L = 1$:} MRC and SC both reduce to the Problem~1 detector, so their
@@ -912,7 +911,7 @@ The arrows in Fig.~\ref{fig:receive} mark this gap. Table~\ref{tab:p2-gaps} give
         curves are parallel at high SNR. (The 1.32~dB at $10^{-4}$ for $L = 2$ is read
         between points with only 52--286 errors, so it is accurate to only about
         $\pm0.2$~dB.)
-  \item \textbf{Origin: array gain} [2, Sec.~3.4], the gain in \emph{average} output
+  \item \textbf{Origin: array gain}, the gain in \emph{average} output
         SNR over one antenna, $\E[\snr_{\mathrm{out}}]/\snr$:
         \begin{itemize}
           \item MRC adds the signals of all $L$ antennas coherently, while the noises
@@ -989,7 +988,7 @@ with $g = h$ and output SNR $\abs{h}^2\snr$.
 
 \subsubsection{Transmit beamforming}
 
-\textbf{Weights} [2, Sec.~4.1]. The transmitter knows $(h_1, h_2)$ and sends the same
+\textbf{Weights.} The transmitter knows $(h_1, h_2)$ and sends the same
 symbol from both antennas, antenna $\ell$ sending $v_\ell x$ with
 \begin{equation}
   \mathbf{v} = \frac{\h^*}{\norm{\h}} = \frac{1}{\sqrt{\abs{h_1}^2 + \abs{h_2}^2}}
@@ -1011,7 +1010,7 @@ symbol from both antennas, antenna $\ell$ sending $v_\ell x$ with
 
 \subsubsection{Alamouti scheme}
 
-\textbf{Transmission matrix} [2, Sec.~4.2]. The transmitter does not know the channel.
+\textbf{Transmission matrix.} The transmitter does not know the channel.
 Two symbols are sent in two channel uses; rows are channel uses and columns are
 antennas:
 \begin{equation}
@@ -1269,14 +1268,6 @@ Where a gap changes, the two values are those of the two arrows in the figure.
 \textbf{In short:} curves with the same diversity order are parallel at high SNR and
 differ by a constant gap (array gain or modulation); curves with different diversity
 orders move apart as the SER falls.
-
-\section*{References}
-\begin{enumerate}[label={[\arabic*]},leftmargin=*]
-  \item R.~Gangula, \emph{Performance in Narrowband Fading Channels}, Lecture Notes,
-        EC5.407 Wireless Communications, IIIT Hyderabad.
-  \item R.~Gangula, \emph{Diversity in Narrowband Fading Channels}, Lecture Notes,
-        EC5.407 Wireless Communications, IIIT Hyderabad.
-\end{enumerate}
 
 %% ================================================================ appendix
 \appendix

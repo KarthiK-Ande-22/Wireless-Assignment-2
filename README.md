@@ -11,7 +11,7 @@ SER curve is checked against theory.
 | 3 | Transmit diversity | 4-QAM over a 2 × 1 Rayleigh channel: single antenna, transmit beamforming and Alamouti, compared with MRC L = 2 (0–24 dB) |
 
 The submitted report is [report/report.pdf](report/report.pdf). The assignment
-statement (`WC_Assignment_2.pdf`, EC5.407 course material) is not included.
+statement is [WC_Assignment_2.pdf](WC_Assignment_2.pdf).
 
 ## Language, version and packages
 
@@ -62,6 +62,7 @@ comes from these scripts. Re-running them reproduces every output byte for byte.
 
 ```
 README.md                this file
+WC_Assignment_2.pdf      assignment statement
 overall_check.py         compares every plotted point of Problems 1-3 with exact theory
 
 common/                  shared building blocks, used by every problem
