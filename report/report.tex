@@ -337,8 +337,6 @@ Sec.~\ref{sec:setup}. In both channels the receiver knows $h$, so the ML decisio
   \hat\imath = \arg\min_{i} \abs{y - h\,u_i}^2 .
   \label{eq:p1-ml}
 \end{equation}
-Each task below first derives the theoretical SER, then describes the simulation and
-shows its figure. The results are discussed in Sec.~\ref{sec:p1-discussion}.
 
 \subsection{Task 1: AWGN channel}
 \label{sec:p1-task1}
@@ -471,12 +469,6 @@ used in the discussion of Sec.~\ref{sec:p1-deep-fade}.
 \FloatBarrier   % all three figures before the discussion
 \subsection{Discussion}
 \label{sec:p1-discussion}
-
-The assignment asks for two points: the agreement between simulation and theory,
-with the reason for any deviation (Sec.~\ref{sec:p1-agreement}), and the difference
-between the AWGN and fading curves at high SNR, explained with the deep-fade argument
-(Sec.~\ref{sec:p1-deep-fade}). Sec.~\ref{sec:p1-gaps} explains the gaps marked by the
-arrows in Figs.~\ref{fig:awgn}--\ref{fig:awgn-vs-fading}.
 
 \subsubsection{Agreement between simulation and theory}
 \label{sec:p1-agreement}
@@ -648,15 +640,13 @@ antenna sends a 4-QAM symbol $x$, and the receiver collects
         Problem~1 are reused unchanged.
 \end{itemize}
 Each receiver turns the $L$ samples into one scalar decision statistic
-$r = g\,x + n$ \eqref{eq:scalar}. Task~1 derives $r$ for MRC and SC, Task~2 simulates
-both, and the results are discussed in Sec.~\ref{sec:p2-discussion}.
+$r = g\,x + n$ \eqref{eq:scalar}.
 
 \subsection{Task 1: combining schemes}
 \label{sec:p2-statistics}
 
 Both receivers reduce $\y$ to an equivalent scalar channel and pass $(r, g)$ to the
-Problem~1 detector $\hat\imath = \arg\min_i \abs{r - g\,u_i}^2$. The table summarises
-the result; the derivations follow.
+Problem~1 detector $\hat\imath = \arg\min_i \abs{r - g\,u_i}^2$.
 
 \begin{center}\small
   \begin{tabular}{@{}lcccc@{}}
@@ -754,7 +744,7 @@ $L \in \{1, 2, 4\}$ and $\snrdb \in \{0, 2, \dots, 24\}$. For each $L$ and SNR:
 \end{enumerate}
 Because MRC and SC see the same symbols, channels and noise, any difference between
 their curves comes from the combining alone. Fig.~\ref{fig:receive} shows all curves
-on one figure, as the assignment asks: one colour per $L$, solid lines for MRC and
+on one figure: one colour per $L$, solid lines for MRC and
 dashed lines for SC. The grey band is the exact single-antenna curve of Problem~1,
 for the $L = 1$ consistency check, and the arrows mark the MRC--SC gap at $10^{-3}$.
 Fig.~\ref{fig:receive-theory} is an extra figure that compares the same points with
@@ -800,12 +790,6 @@ discussion:
 \FloatBarrier   % both figures before the discussion
 \subsection{Discussion}
 \label{sec:p2-discussion}
-
-The assignment asks for four points: the decision statistics of Task~1
-(Sec.~\ref{sec:p2-disc-statistics}), a consistency check for $L = 1$
-(Sec.~\ref{sec:p2-consistency}), the high-SNR slope of each curve against the
-predicted diversity order (Sec.~\ref{sec:p2-slope}), and the SNR gap between MRC and
-SC with its origin in array gain (Sec.~\ref{sec:p2-gap}).
 
 \subsubsection{Decision statistics}
 \label{sec:p2-disc-statistics}
@@ -960,14 +944,12 @@ in a channel use, the single receive antenna gets
         Problem~1 are reused.
 \end{itemize}
 As in Problem~2, every receiver ends with one scalar channel $r = g\,x + n$,
-$n \sim \CN(0, 1/\snr)$ \eqref{eq:scalar}. Task~1 derives it for each scheme, Task~2
-simulates them, and Sec.~\ref{sec:p3-discussion} discusses the results.
+$n \sim \CN(0, 1/\snr)$ \eqref{eq:scalar}.
 
 \subsection{Task 1: transmission schemes}
 \label{sec:p3-task1}
 
-The table summarises the three schemes, with MRC ($L = 2$) of Problem~2 for
-comparison; the derivations follow.
+The three schemes, with MRC ($L = 2$) of Problem~2 for comparison:
 
 \begin{center}\small
   \begin{tabular}{@{}lcccc@{}}
@@ -1092,7 +1074,7 @@ $\snrdb \in \{0, 2, \dots, 24\}$. For each scheme and SNR:
         count the errors over all $N$ symbols.
 \end{enumerate}
 The MRC ($L = 2$) curve is simulated with the Problem~2 code. Fig.~\ref{fig:transmit}
-shows all four curves on one figure, as the assignment asks; Fig.~\ref{fig:transmit-theory}
+shows all four curves on one figure; Fig.~\ref{fig:transmit-theory}
 compares the same points with the exact theory of Sec.~\ref{sec:exact}. Every curve
 agrees with its theory (largest deviation $2.55\sigma$), and beamforming agrees with
 the independent MRC simulation within $1.51\sigma$.\footnote{The single-antenna
@@ -1129,10 +1111,6 @@ curve is identical to the $L = 1$ curve of Problem~2. Both scripts start from se
 \FloatBarrier   % both figures before the discussion
 \subsection{Discussion}
 \label{sec:p3-discussion}
-
-The assignment asks for two points: the diversity order of each scheme, read from
-the slope of its curve at high SNR (Sec.~\ref{sec:p3-diversity}), and the SNR gaps
-between beamforming, Alamouti and MRC, with their origin (Sec.~\ref{sec:p3-gaps}).
 
 \subsubsection{Diversity order}
 \label{sec:p3-diversity}
